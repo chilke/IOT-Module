@@ -1,11 +1,10 @@
 #include "ESP8266WiFi.h"
-#include "ArduinoOTA.h"
+#include "UDPListener.h"
+#include "OTA.h"
 #include "limits.h"
 
 #define CONNECT_DELAY_MILLIS 30000
 
-const char* ssid = "HILKE_C";
-const char* password = "6369807439";
 unsigned long lastConnectAttempt = ULONG_MAX-CONNECT_DELAY_MILLIS;
 
 void setup() {
@@ -27,11 +26,11 @@ void setup() {
         IPAddress myIP = WiFi.softAPIP();
         Serial.print("AP IP address: ");
         Serial.println(myIP);
-        setupOTA();
+        udpBegin();
         Serial.println("OTA Setup Waiting for upload");
         delay(1000);
         while (1) {
-          ArduinoOTA.handle();
+          udpHandle();
           delay(1000);
         }
     }
@@ -39,7 +38,7 @@ void setup() {
   } // end check for safemode startup
 
   // Setup Over the Air update handler
-  setupOTA();
+  udpBegin();
 }
 
 void loop() {
@@ -117,5 +116,5 @@ void loop() {
   }
 
   // Handle Over the Air update events
-  ArduinoOTA.handle();
+  udpHandle();
 }

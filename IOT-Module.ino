@@ -4,16 +4,21 @@
 #include "limits.h"
 
 #define CONNECT_DELAY_MILLIS 30000
+#define CONFIG_SSID "CHILKE_IOT"
+#define CONFIG_PASSWORD "iot-password"
 
 unsigned long lastConnectAttempt = ULONG_MAX-CONNECT_DELAY_MILLIS;
+bool isConfigConnection;
 
 void setup() {
   // Start Serial
   Serial.begin(115200);
   WiFi.persistent(false);
+  WiFi.enableSTA(true);
+  WiFi.enableAP(false);
   // Setup PINs
   pinMode(4, INPUT_PULLUP);
-
+  isConfigConnection = false;
   // Check for safemode startup
   uint8_t count = 0;
   while(digitalRead(4) == 0) {
@@ -36,6 +41,8 @@ void setup() {
     }
     delay(100);
   } // end check for safemode startup
+  
+//  saveWifiCredential("HILKE_C", "6369807438");
 
   // Setup Over the Air update handler
   udpBegin();
@@ -43,14 +50,6 @@ void setup() {
 
 void loop() {
   if ((WiFi.getMode() & WIFI_AP) || WiFi.status() != WL_CONNECTED) {
-    if (!(WiFi.getMode() & WIFI_AP)) {
-      Serial.println("Not connected, starting AP");
-      char tmp[18];
-      sprintf(tmp, "CHILKE_IOT_%06X", ESP.getChipId());
-      WiFi.softAP(tmp, "password");
-      Serial.print("Status after AP: ");
-      Serial.println(WiFi.status());
-    }
     if (millis() - lastConnectAttempt > CONNECT_DELAY_MILLIS) {
       int8_t ret = WiFi.scanComplete();
       if (ret >= 0) {
@@ -59,13 +58,22 @@ void loop() {
           Serial.println("No networks found");
         } else {
           loadWifiCredentials();
-          for (uint8_t i = 0; i < wifiCredentialCount(); i++) {
-            char *ssid = wifiCredentialSSID(i);
+          for (uint8_t i = 0; i <= wifiCredentialCount(); i++) {
+            char *ssid; 
+            char *password;
+
+            if (i < wifiCredentialCount()) {
+              ssid = wifiCredentialSSID(i);
+              password = wifiCredentialPassword(i);
+            } else {
+              ssid = CONFIG_SSID;
+              password = CONFIG_PASSWORD;
+            }
+            
             Serial.print("Searching scan results for: ");
             Serial.println(ssid);
             for (uint8_t j = 0; j < ret; j++) {
               if (strncmp(ssid, WiFi.SSID(j).c_str(), 32) == 0) {
-                char *password = wifiCredentialPassword(i);
                 if (strlen(password) > 0) {
                   if (WiFi.encryptionType(j) != ENC_TYPE_NONE) {
                     Serial.print("Found, attempting connect with password: ");
@@ -91,6 +99,12 @@ void loop() {
                   s = WiFi.status();
                 }
                 if (s == WL_CONNECTED) {
+                  if (i < wifiCredentialCount()) {
+                    isConfigConnection = false;
+                  } else {
+                    Serial.println("Connected to config ap");
+                    isConfigConnection = true;
+                  }
                   WiFi.softAPdisconnect(true);
                   Serial.print("Connected, IP: ");
                   Serial.println(WiFi.localIP());
@@ -107,12 +121,21 @@ void loop() {
           } // end wifi credentials loop
         }
         WiFi.scanDelete();
+
+        if (WiFi.status() != WL_CONNECTED && !(WiFi.getMode() & WIFI_AP)) {
+          Serial.println("Not connected, starting AP");
+          WiFi.softAP(CONFIG_SSID, CONFIG_PASSWORD);
+          Serial.print("Status after AP: ");
+          Serial.println(WiFi.status());
+        } // end scan complete
+        
         lastConnectAttempt = millis();
       } else if (ret == WIFI_SCAN_FAILED) {
         Serial.println("Scan started");
         WiFi.scanNetworks(true);
       }
-    }
+      
+    } // end time for next scan
   }
 
   // Handle Over the Air update events

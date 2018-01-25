@@ -17,7 +17,20 @@ uint16_t ota_port;
 uint16_t ota_udp_port;
 IPAddress ota_ip;
 
+void otaSetPassword(char *passwd) {
+  MD5Builder passmd5;
+  passmd5.begin();
+  passmd5.add(passwd);
+  passmd5.calculate();
+  password = passmd5.toString();
+}
+
+void otaSetPasswordHash(char *passwd) {
+  password = passwd;
+}
+
 void otaBegin() {
+  otaSetPasswordHash("5f4dcc3b5aa765d61d8327deb882cf99");
   MDNS.begin("myesp8266");
   if (password.length()) {
     MDNS.enableArduino(MY_UDP_PORT, true);
@@ -29,7 +42,6 @@ void otaBegin() {
 
 void otaHandle(WiFiUDP *udp) {
   if (state == OTA_RUNUPDATE) {
-    Serial.println("otaHandle, state = OTA_RUNUPDATE");
     udp->beginPacket(ota_ip, ota_udp_port);
     if (!Update.begin(size, command)) {
       StreamString ss;
@@ -87,35 +99,15 @@ void otaHandle(WiFiUDP *udp) {
 bool otaHandleCmd(unsigned char *cmdBuffer, int len, WiFiUDP *udp) {
   int i = 0;
   uint8_t cmd = parseInt((char *)cmdBuffer, i);
-  Serial.print("otaHandleCmd: ");
-  Serial.println(cmd);
   if (cmd == U_FLASH || cmd == U_SPIFFS) {
-    Serial.print("state: ");
-    Serial.println(state);
     if (state == OTA_IDLE) {
       int i = 1;
       command = cmd;
       ota_ip = udp->remoteIP();
       ota_udp_port = udp->remotePort();
-      Serial.print("index before ota_port: ");
-      Serial.println(i);
       ota_port = parseInt((char *)cmdBuffer, i);
-      Serial.print("index after ota_port: ");
-      Serial.println(i);
-      Serial.print("ota_port: ");
-      Serial.println(ota_port);
-      Serial.print("index before size: ");
-      Serial.println(i);
       size = parseInt((char *)cmdBuffer, i);
-      Serial.print("index after size: ");
-      Serial.println(i);
-      Serial.print("size: ");
-      Serial.println(size);
       md5 = parseNonSpaceString((char *)cmdBuffer, i);
-      Serial.print("md5: ");
-      Serial.print(md5);
-      Serial.print(" Length: ");
-      Serial.println(md5.length());
       if (md5.length() == 32) {
         if (password.length()) {
           MD5Builder nonce_md5;
@@ -132,7 +124,6 @@ bool otaHandleCmd(unsigned char *cmdBuffer, int len, WiFiUDP *udp) {
           state = OTA_WAITAUTH;
         }
         else {
-          Serial.println("State change to RUNUPDATE");
           state = OTA_RUNUPDATE;
         }
       }
@@ -141,8 +132,8 @@ bool otaHandleCmd(unsigned char *cmdBuffer, int len, WiFiUDP *udp) {
     }
   } else if (cmd == U_AUTH) {
     if (state == OTA_WAITAUTH) {
-      String cnonce = parseNonSpaceString((char *)&cmdBuffer[i], i);
-      String response = parseNonSpaceString((char *)&cmdBuffer[i], i);
+      String cnonce = parseNonSpaceString((char *)cmdBuffer, i);
+      String response = parseNonSpaceString((char *)cmdBuffer, i);
       if (cnonce.length() == 32 && response.length() == 32) {
         String challenge = password + ":" + nonce + ":" + cnonce;
         MD5Builder challengemd5;

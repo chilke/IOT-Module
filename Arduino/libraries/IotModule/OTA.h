@@ -1,3 +1,6 @@
+#ifndef OTA_H
+#define OTA_H
+
 #include <WiFiUDP.h>
 
 typedef enum {
@@ -17,3 +20,5 @@ typedef enum {
 bool otaHandleCmd(unsigned char *cmdBuffer, int len, WiFiUDP *udp);
 void otaHandle(WiFiUDP *udp);
 void otaBegin();
+
+#endif

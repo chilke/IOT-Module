@@ -1,3 +1,5 @@
+#ifndef WIFI_CREDENTIALS_H
+#define WIFI_CREDENTIALS_H
 
 void deleteWifiCredentials();
 void debugWifiCredentials();
@@ -7,3 +9,5 @@ char *wifiCredentialPassword(uint8_t i);
 void loadWifiCredentials();
 uint8_t wifiCredentialCount();
 void saveWifiCredential(char *ssid, char *password);
+
+#endif

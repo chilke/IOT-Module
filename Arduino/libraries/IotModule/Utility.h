@@ -1,5 +1,6 @@
 
 
+
 int parseInt(char *buf, int &i) {
   int ret = 0;
   while (buf[i] == ' ' || buf[i] == '\t') {

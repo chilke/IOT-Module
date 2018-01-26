@@ -10,8 +10,9 @@
 #include <ESP8266WiFiGeneric.h>
 #include <ESP8266WiFiSTA.h>
 
-#include "UDPListener.h"
-#include "OTA.h"
+#include <UDPListener.h>
+#include <OTA.h>
+#include <WifiCredentials.h>
 #include "limits.h"
 
 #define CONNECT_DELAY_MILLIS 30000

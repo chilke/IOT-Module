@@ -1,5 +1,5 @@
-
-#include "EEPROM.h"
+#include <Arduino.h>
+#include <EEPROM.h>
 
 //  char *ssid1 = "HILKE1";
 //  char *password1 = "1369807439";
@@ -131,4 +131,3 @@ void saveWifiCredential(char *ssid, char *password) {
 
   clearWifiCredentials();
 }
-

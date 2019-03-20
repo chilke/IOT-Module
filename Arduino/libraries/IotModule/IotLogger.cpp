@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <IotTime.h>
 #include <IotLogger.h>
 
 //TODO add logic to disconnect when tcp logging is disabled
@@ -155,20 +156,17 @@ void IotLogger::write(const char *s) {
     }
 }
 
-int IotLogger::getLogHeader(char *s, size_t size, const char *levelName) {
-    unsigned int curTime, hours, minutes, seconds, milliseconds;
+int IotLogger::getLogHeader(char *s, int size, const char *levelName) {
+    int l = Time.curTimeToBuffer(s, size);
 
-    curTime = (unsigned int)(millis()%86400000);
-    milliseconds = curTime % 1000;
-    curTime /= 1000;
-    seconds = curTime % 60;
-    curTime /= 60;
-    minutes = curTime % 60;
-    curTime /= 60;
-    hours = curTime % 24;
+    if (l < size) {
+        size -= l;
+        s += l;
 
-    return snprintf(s, size, "%02u:%02u:%02u.%03u %s: ", hours,
-        minutes, seconds, milliseconds, levelName);
+        return snprintf(s, size, " %s: ", levelName);
+    }
+
+    return size;
 }
 
 IotLogger Logger;

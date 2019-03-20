@@ -12,7 +12,6 @@ curHost(0),
 curDrift(0)
 {
     udp.begin(12345);
-    rt.epochSeconds = 0;
 }
 
 void IotTime::handle() {
@@ -51,13 +50,20 @@ void IotTime::handle() {
             if (curDrift > 0) {
                 sysToEpochOffset++;
             } else if (curDrift < 0) {
-                nextEpochSecondHold = sysSeconds()+5;
+                nextEpochSecondHold = sysSeconds(NULL)+5;
             }
             curDrift = 0;
         }
 
         nextSync = m+NTP_SYNC_DELAY;
     }
+}
+
+int IotTime::curTimeToBuffer(char *buf, int size) {
+    uint16_t curMillis;
+    uint32_t seconds = epochSeconds(sysSeconds(&curMillis));
+
+    return toBuffer(seconds, curMillis, buf, size);
 }
 
 uint32_t IotTime::doNtpRequest(uint32_t m) {
@@ -78,11 +84,15 @@ uint32_t IotTime::doNtpRequest(uint32_t m) {
     }
 
     Logger.debugf("Sending ntp request to %s", host.c_str());
-    Logger.debugf("Transmit Timestamp %u", msg.transmit_timestamp[0]);
-    Logger.debug("Request packet:");
-    Logger.dump((uint8_t *)&msg, sizeof(msg));
+//    Logger.debugf("Transmit Timestamp %u", msg.transmit_timestamp[0]);
+ //   Logger.debug("Request packet:");
+//    Logger.dump((uint8_t *)&msg, sizeof(msg));
 
+#ifdef NTP_TESTING
+    udp.beginPacket("192.168.101.15", 123+curHost);
+#else
     udp.beginPacket(host.c_str(), 123);
+#endif
     udp.write((uint8_t *)&msg, sizeof(msg));
     udp.endPacket();
 
@@ -95,8 +105,8 @@ uint32_t IotTime::doNtpRequest(uint32_t m) {
             delay(NTP_WAIT_DELAY);
         }
         if (udp.read((uint8_t *)&msg, sizeof(msg)) == sizeof(msg)) {
-            Logger.debug("Response packet:");
-            Logger.dump((uint8_t *)&msg, sizeof(msg));
+//            Logger.debug("Response packet:");
+//            Logger.dump((uint8_t *)&msg, sizeof(msg));
             Logger.debugf("Resp Orig Timestamp %u", msg.originate_timestamp[0]);
             if (msg.originate_timestamp[0] == m) {
                 break;
@@ -113,16 +123,12 @@ uint32_t IotTime::doNtpRequest(uint32_t m) {
     if (msg.stratum != 0) {
         uint32_t ret = ntohl(msg.receive_timestamp[0]);
         Logger.debugf("Good response: %u", ret);
-        return ret - NTP_TO_EPOCH - sysSeconds();
+        return ret - NTP_TO_EPOCH - sysSeconds(NULL);
     } else {
         Logger.debug("Received KOD response");
     }
 
     return 0;
-}
-
-uint32_t IotTime::epochSeconds() {
-    return epochSeconds(sysSeconds());
 }
 
 uint32_t IotTime::epochSeconds(uint32_t sysSeconds) {
@@ -133,7 +139,7 @@ uint32_t IotTime::epochSeconds(uint32_t sysSeconds) {
     return sysSeconds+sysToEpochOffset;
 }
 
-uint32_t IotTime::sysSeconds() {
+uint32_t IotTime::sysSeconds(uint16_t *curMillis) {
     /* Max uint32 is 4294967296.  This means 4294967 seconds per roll + 1 extra per 3
         Keep in mind msec rolls happen once per 50 days so we aren't losing or gaining much either way */
     uint32_t m = millis();
@@ -145,11 +151,11 @@ uint32_t IotTime::sysSeconds() {
         seconds += rolls/3;
     }
 
-    return seconds;
-}
+    if (curMillis) {
+        *curMillis = (uint16_t)(m%1000);
+    }
 
-void IotTime::setRealTime(RealTime& rt) {
-    this->rt = rt;
+    return seconds;
 }
 
 IotTime Time;

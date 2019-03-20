@@ -13,6 +13,7 @@ bool otaRunning = false;
 
 void setup() {
     Logger.begin(LOG_LEVEL_DEBUG, LOG_UART, 115200);
+    Time.setOffset(-5);
     if (!SPIFFS.begin()) {
         Logger.error("SPIFFS begin failure!!");
     }

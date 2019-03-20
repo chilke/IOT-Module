@@ -37,7 +37,7 @@ public:
 private:
     void logf(const char *levelName, const char *f, va_list args);
     void write(const char *s);
-    int getLogHeader(char *s, size_t size, const char* levelName);
+    int getLogHeader(char *s, int size, const char* levelName);
     uint8_t loggerLevel;
     uint8_t enabledLogs;
     IPAddress ip;

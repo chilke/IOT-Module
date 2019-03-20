@@ -3,11 +3,14 @@
 
 #include <Arduino.h>
 #include <WiFiUDP.h>
+#include <RealTime.h>
 
-#define NTP_SYNC_DELAY 60000
+#define NTP_TESTING
 
-#define NTP_WAIT_DELAY 200
-#define NTP_WAIT_LOOP 50
+#define NTP_SYNC_DELAY 20000
+
+#define NTP_WAIT_DELAY 100
+#define NTP_WAIT_LOOP 10
 
 #define NTP_HOST_0 "time.nist.gov"
 #define NTP_HOST_1 "pool.ntp.org"
@@ -29,31 +32,20 @@ typedef struct sntp_msg_t {
     uint32_t transmit_timestamp[2];
 } sntp_msg;
 
-class RealTime {
-public:
-    uint16_t year;
-    uint8_t month;
-    uint8_t day;
-    uint8_t weekDay;
-    uint8_t hour;
-    uint8_t minute;
-    uint8_t second;
-
-    uint32_t epochSeconds;
-};
-
 class IotTime {
 public:
     IotTime();
     void handle();
-    void setRealTime(RealTime& rt);
-    String toString();
+    void setOffset(int32_t offset) { rt.setOffset(offset); };
+    int curTimeToBuffer(char *buf, int size);
+    int toBuffer(uint32_t epochSeconds, uint16_t milliSeconds, char *buf, int size) {
+        return rt.toBuffer(epochSeconds, milliSeconds, buf, size);
+    };
 
 private:
     uint32_t doNtpRequest(uint32_t m);
-    uint32_t epochSeconds();
     uint32_t epochSeconds(uint32_t sysSeconds);
-    uint32_t sysSeconds();
+    uint32_t sysSeconds(uint16_t *curMillis);
 
     uint32_t milliRolls;
     uint32_t lastMillis;

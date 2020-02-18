@@ -6,11 +6,11 @@
 
 #include <stdint.h>
 #include <stdlib.h>  // for size_t
+#include "../Configuration.hpp"
+#include "../Polyfills/math.hpp"
 
-#include <ArduinoJson/Configuration.hpp>
-#include "math.hpp"
-
-namespace ARDUINOJSON_NAMESPACE {
+namespace ArduinoJson {
+namespace Internals {
 
 template <typename T, typename F>
 struct alias_cast_t {
@@ -26,4 +26,6 @@ T alias_cast(F raw_data) {
   ac.raw = raw_data;
   return ac.data;
 }
-}  // namespace ARDUINOJSON_NAMESPACE
+
+}  // namespace Internals
+}  // namespace ArduinoJson

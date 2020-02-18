@@ -5,9 +5,7 @@
 #include <WiFiUDP.h>
 #include <RealTime.h>
 
-#define NTP_TESTING
-
-#define NTP_SYNC_DELAY 20000
+#define NTP_SYNC_DELAY 3600000
 
 #define NTP_WAIT_DELAY 100
 #define NTP_WAIT_LOOP 10

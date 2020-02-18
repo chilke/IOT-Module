@@ -10,6 +10,11 @@ void handleDebugInfo();
 void handleLogger();
 void handleReset();
 void handleUpload();
+void handleValidate();
+void handleCpu();
+void handleEnter();
+void handleExit();
+void handleReadDeviceId();
 void handleNotFound();
 
 #endif

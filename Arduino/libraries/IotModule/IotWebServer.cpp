@@ -12,6 +12,7 @@ static String jsonContent = "application/json";
 static String textContent = "text/plain";
 static String successBody = "{\"status\":\"OK\"}";
 static String methodError = "Method not allowed";
+static String notFoundError = "Resource not found";
 
 IotWebServer::IotWebServer(int port)
 : ESP8266WebServer(port)
@@ -24,6 +25,11 @@ IotWebServer::IotWebServer(int port)
     on("/logger", handleLogger);
     on("/reset", handleReset);
     on("/upload", handleUpload);
+    on("/validate", handleValidate);
+    on("/cpu", handleCpu);
+    on("/enter", handleEnter);
+    on("/exit", handleExit);
+    on("/read_device_id", handleReadDeviceId);
 
     onNotFound(handleNotFound);
 }
@@ -60,6 +66,10 @@ void IotWebServer::debug() {
 
 void sendNotAllowed() {
     WebServer.send(405, textContent, methodError);
+}
+
+void sendNotFound() {
+    WebServer.send(404, textContent, notFoundError);
 }
 
 void handleListdir() {
@@ -385,6 +395,87 @@ void handleUpload() {
     }
 }
 
+void handleValidate() {
+    Logger.debug("handleValidate()");
+    WebServer.debug();
+
+    if (WebServer.method() == HTTP_GET && WebServer.hasArg("file")) {
+        String fileName = WebServer.arg("file");
+        if (SPIFFS.exists(fileName)) {
+            File f = SPIFFS.open(fileName, "r");
+            int ret = PicUpdater.init(&f);
+            WebServer.send(200, textContent, String(ret));
+        } else {
+            sendNotFound();
+        }
+    } else {
+        sendNotAllowed();
+    }
+}
+
+void handleCpu() {
+    Logger.debug("handleCpu()");
+    WebServer.debug();
+
+    if (WebServer.method() == HTTP_GET && WebServer.hasArg("freq")) {
+        int freq = WebServer.arg("freq").toInt();
+
+        if (freq == 80 || freq == 160) {
+            system_update_cpu_freq(freq);
+
+            WebServer.send(200, textContent, "Done");
+        } else {
+            sendNotAllowed();
+        }
+    } else {
+        sendNotAllowed();
+    }
+}
+
+void handleEnter() {
+    Logger.debug("handleEnter()");
+    WebServer.debug();
+
+    PicUpdater.enterProgramMode();
+
+    WebServer.send(200, textContent, "Done");
+}
+
+void handleExit() {
+    Logger.debug("handleExit()");
+    WebServer.debug();
+
+    PicUpdater.exitProgramMode();
+
+    WebServer.send(200, textContent, "Done");
+}
+
+void handleReadDeviceId() {
+    uint16_t deviceId;
+    uint16_t revisionId;
+    char cStr[5];
+    Logger.debug("handleReadDeviceId()");
+    WebServer.debug();
+
+    PicUpdater.getDeviceAndRevisionId(&deviceId, &revisionId);
+
+    DynamicJsonBuffer jb(JSON_BUFFER_SIZE);
+    JsonObject& obj = jb.createObject();
+    String buffer = "";
+    buffer.reserve(JSON_BUFFER_SIZE);
+
+    obj["deviceInt"] = deviceId;
+    sprintf(cStr, "%04X", deviceId);
+    obj["deviceId"] = String(cStr);
+
+    obj["revisionInt"] = revisionId;
+    sprintf(cStr, "%04X", revisionId);
+    obj["revisionId"] = String(cStr);
+
+    obj.printTo(buffer);
+    WebServer.send(200, jsonContent, buffer);
+}
+
 void handleNotFound() {
     Logger.debug("handleNotFound()");
     WebServer.debug();
@@ -407,7 +498,7 @@ void handleNotFound() {
         }
     }
 
-    WebServer.send(404, textContent, "Resource not found");
+    sendNotFound();
 }
 
 IotWebServer WebServer(80);

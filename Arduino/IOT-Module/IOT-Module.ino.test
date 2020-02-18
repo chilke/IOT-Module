@@ -1,0 +1,39 @@
+#include <Arduino.h>
+
+int LedPin = 0;
+int Level = 0;
+int Invert = 1;
+char Buffer[100];
+
+int LastLedPin = 0;
+
+void setup() {
+    Serial.begin(115200);
+
+    pinMode(LedPin, OUTPUT);
+    analogWrite(LedPin, Invert ? 1023-Level: Level);
+}
+
+void loop() {
+    while (Serial.available() && !isdigit(Serial.peek())) {
+        Serial.println(Serial.read(), DEC);
+    }
+    if (Serial.available())
+    {
+        LedPin = Serial.parseInt();
+        Invert = Serial.parseInt();
+        Level = Serial.parseInt();
+
+        if (LedPin >= 0 && LedPin <= 16 && LedPin != 1 && LedPin != 3 &&
+            (LedPin <= 5 || LedPin >= 12) && Level >= 0 && Level <= 1023) {
+            pinMode(LedPin, OUTPUT);
+            digitalWrite(LastLedPin, 0);
+            LastLedPin = LedPin;
+            analogWrite(LedPin, Invert ? 1023-Level: Level);
+            sprintf(Buffer, "Set pin %i: %i", LedPin, Level);
+            Serial.println(Buffer);
+        } else {
+            Serial.println("Error processing values");
+        }
+    }
+}

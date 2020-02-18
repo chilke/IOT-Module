@@ -59,13 +59,13 @@ bool WiFiConnectionManager::tryConnect(String ssid, String password) {
     delete scanInfo;
 
     Logger.infof("Trying connect to: %s", ssid.c_str());
-    s = WiFi.waitForConnectResult();
+    s = (wl_status_t)WiFi.waitForConnectResult();
     if (s != WL_CONNECTED) {
         Logger.warnf("Connect failed with status: %i", s);
         if (curSsid.length() > 0) {
             Logger.infof("Attempting reconnect to %s", curSsid.c_str());
             WiFi.begin(curSsid, curPassword);
-            s = WiFi.waitForConnectResult();
+            s = (wl_status_t)WiFi.waitForConnectResult();
             if (s != WL_CONNECTED) {
                 Logger.warnf("Connect failed with status: %i", s);
             } else {
@@ -119,7 +119,7 @@ void WiFiConnectionManager::handle() {
                     }
                     cur = cur->next;
                 }
-                status = WiFi.waitForConnectResult();
+                status = (wl_status_t)WiFi.waitForConnectResult();
                 if (status == WL_CONNECTED) {
                     lastSsid = ssid;
                     Logger.infof("Connected, IP: %s", WiFi.localIP().toString().c_str());

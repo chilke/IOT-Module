@@ -1,5 +1,6 @@
 #include <Arduino.h>
 
+#include <IotModule.h>
 #include <IotHexFileReader.h>
 
 
@@ -69,6 +70,7 @@ int IotHexFileReader::getNextData(FileReaderData *data) {
         return HFR_DATA_DONE;
     } else if (type == 4) {
         baseAddress = htoin(&buffer[bufPos], 4);
+        baseAddress <<= 16;
         bufPos+=7; //7 here to account for checksum and single line terminator
         if (buffer[bufPos] == 0x0A) {
             bufPos++;
@@ -96,6 +98,13 @@ int IotHexFileReader::getNextData(FileReaderData *data) {
     } else {
         return HFR_UNSUPPORTED_RECORD;
     }
+
+    char buffer[33];
+    for (int i = 0; i < data->length; i++) {
+        sprintf(&buffer[i*2], "%02X", data->data[i]);
+    }
+    Logger.debugf("getNextData %04X %02X", data->address, data->length);
+    Logger.debug(buffer);
 
     return HFR_DATA_SUCCESS;
 }

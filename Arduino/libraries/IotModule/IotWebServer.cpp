@@ -25,11 +25,13 @@ IotWebServer::IotWebServer(int port)
     on("/logger", handleLogger);
     on("/reset", handleReset);
     on("/upload", handleUpload);
-    on("/validate", handleValidate);
+    on("/send_file", handleSendFile);
     on("/cpu", handleCpu);
     on("/enter", handleEnter);
     on("/exit", handleExit);
     on("/read_device_id", handleReadDeviceId);
+    on("/read", handleReadMemory);
+    on("/bulk_erase", handleBulkErase);
 
     onNotFound(handleNotFound);
 }
@@ -395,15 +397,21 @@ void handleUpload() {
     }
 }
 
-void handleValidate() {
-    Logger.debug("handleValidate()");
+void handleSendFile() {
+    Logger.debug("handleSendFile()");
     WebServer.debug();
 
     if (WebServer.method() == HTTP_GET && WebServer.hasArg("file")) {
         String fileName = WebServer.arg("file");
         if (SPIFFS.exists(fileName)) {
             File f = SPIFFS.open(fileName, "r");
-            int ret = PicUpdater.init(&f);
+            int ret;
+            if (WebServer.hasArg("validate")) {
+                Logger.debug("Validating");
+                ret = PicUpdater.validateFile(&f);
+            } else {
+                ret = PicUpdater.sendFile(&f);
+            }
             WebServer.send(200, textContent, String(ret));
         } else {
             sendNotFound();
@@ -474,6 +482,43 @@ void handleReadDeviceId() {
 
     obj.printTo(buffer);
     WebServer.send(200, jsonContent, buffer);
+}
+
+void handleReadMemory() {
+    uint16_t data[16];
+    char buffer[16*4+1];
+    Logger.debug("handleReadMemory()");
+    WebServer.debug();
+
+    if (WebServer.hasArg("addr") && WebServer.hasArg("count")) {
+        int addr = WebServer.arg("addr").toInt();
+        int count = WebServer.arg("count").toInt();
+
+        if (count <= 16 && count > 0) {
+            count = PicUpdater.readMemory(addr, count, data);
+        }
+
+        if (count > 0) {
+            for (int i = 0; i < count; i++) {
+                sprintf(&buffer[i*4], "%04X", data[i]);
+            }
+
+            WebServer.send(200, textContent, String(buffer));
+        } else {
+            sendNotAllowed();
+        }
+    } else {
+        sendNotAllowed();
+    }
+}
+
+void handleBulkErase() {
+    Logger.debug("handleBulkErase()");
+    WebServer.debug();
+
+    PicUpdater.bulkErase();
+
+    WebServer.send(200, textContent, "Done");
 }
 
 void handleNotFound() {

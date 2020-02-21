@@ -2,40 +2,20 @@
 
 #include <IotModule.h>
 
-int IotPicUpdater::init(File *f) {
-    int ret = initFile(f);
-
-    if (ret != PU_SUCCESS) {
-        return ret;
-    }
-
-    ret = validateFile();
-
-    if (ret != PU_SUCCESS) {
-        return ret;
-    }
-
-    ret = initFile(f);
-
-    if (ret != PU_SUCCESS) {
-        return ret;
-    }
-
-    enterProgramMode();
-
-    return PU_SUCCESS;
+IotPicUpdater::IotPicUpdater() {
+    resetPC = 1;
+    curAddr = 0;
+    validating = 0;
 }
 
 int IotPicUpdater::initFile(File *f) {
     HexFileReader.init(f);
 
     if (HexFileReader.getNextData(&curFileData) != HFR_DATA_SUCCESS) {
-        done = 1;
         return PU_NEXT_DATA_FAIL;
     }
 
     if (curFileData.address != 0) {
-        done = 1;
         return PU_INV_START_ADDR;
     }
 
@@ -46,19 +26,26 @@ int IotPicUpdater::initFile(File *f) {
     // Should check the return here, but because we know the addr is 0, this can never fail
     updateMemoryMap();
 
-    done = 0;
-    validating = 0;
     resetPC = 1;
 
     return PU_SUCCESS;
 }
 
-int IotPicUpdater::sendFile() {
-    int ret = 0;
+int IotPicUpdater::sendFile(File *f) {
+    int ret;
+
+    ret = initFile(f);
+
+    if (ret != PU_SUCCESS) {
+        return ret;
+    }
+
+    ret = 0;
 
     while (ret == 0) {
         ret = sendNextRow();
     }
+
     return ret;
 }
 
@@ -69,10 +56,10 @@ void IotPicUpdater::getDeviceAndRevisionId(uint16_t *deviceId, uint16_t *revisio
     *deviceId = readNVM(false);
 }
 
-int IotPicUpdater::validateFile() {
+int IotPicUpdater::validateFile(File *f) {
     int ret;
     validating = 1;
-    ret = sendFile();
+    ret = sendFile(f);
     validating = 0;
     return ret;
 }
@@ -94,50 +81,111 @@ void IotPicUpdater::exitProgramMode() {
     digitalWrite(ICSP_MCLR_PIN, 1);
 }
 
-int IotPicUpdater::sendNextRow() {
-    if (done) {
-        return done;
+void IotPicUpdater::bulkErase() {
+    //Set PC to 0x0000 to ensure we erase program flash and configuration words
+    sendByte(PU_CMD_LOAD_PC);
+    delayMicroseconds(1);
+    sendValue(0x0000);
+    delayMicroseconds(1);
+
+    sendByte(PU_CMD_BULK_ERASE);
+    delay(9);
+}
+
+uint8_t IotPicUpdater::readMemory(uint16_t addr, uint8_t count, uint16_t *data) {
+    if (addr != curAddr) {
+        resetPC = 1;
     }
+    curAddr = addr;
+
+    if (!updateMemoryMap()) {
+        return 0;
+    }
+
+    if (curAddr + count > blockEnd) {
+        count = blockEnd - curAddr + 1;
+    }
+
+    for (int i = 0; i < count; i++) {
+        data[i] = readNVM(true);
+        curAddr++;
+    }
+
+    return count;
+}
+
+int IotPicUpdater::sendNextRow() {
+    uint16_t rowAddr[16];
+    uint16_t rowData[16];
+    uint8_t rowPos = 0;
+    uint16_t newAddr;
+    uint16_t curVal;
+    int ret = HFR_DATA_SUCCESS;
+
     while ((curAddr & rowMask) == curRow) {
-        uint16_t curVal = curFileData.data[curDataPos];
+        curVal = curFileData.data[curDataPos];
         curDataPos++;
         curVal |= (curFileData.data[curDataPos]<<8);
         curDataPos++;
-        if (!sendNVM(curVal)) {
-            done = 1;
-            return PU_SEND_NVM_FAIL;
-        }
+        rowData[rowPos] = curVal;
+        rowAddr[rowPos] = curAddr;
+        rowPos++;
+        Logger.debugf("sendNVM %04X %04X", curAddr, curVal);
+        sendNVM(curVal);
+
+        curAddr++;
 
         if (curDataPos >= curFileData.length) {
-            int ret = HexFileReader.getNextData(&curFileData);
+            ret = HexFileReader.getNextData(&curFileData);
             if (ret == HFR_DATA_DONE) {
-                done = 1;
                 break;
             }
             if (ret != HFR_DATA_SUCCESS) {
-                done = 1;
                 return PU_NEXT_DATA_FAIL;
             }
 
-            uint16_t newAddr = curFileData.length >> 1;
-            if (newAddr <= curAddr) {
-                done = 1;
+            newAddr = curFileData.address >> 1;
+            if (newAddr < curAddr) {
                 return PU_INVALID_ADDR;
             }
-            if (newAddr != (curAddr+1)) {
+            if (newAddr != curAddr) {
                 resetPC = 1;
             }
             curAddr = newAddr;
-            if (curAddr > blockEnd) {
-                updateMemoryMap();
-            }
+            curDataPos = 0;
         }
     }
 
-    //send commit row to PIC
+    if (!validating) {
+        sendByte(PU_CMD_COMMIT);
+        delay(6);
+
+        newAddr = curAddr;
+
+        for (int i = 0; i < rowPos; i++) {
+            if (curAddr != rowAddr[0]) {
+                curAddr = rowAddr[0];
+                resetPC = 1;
+            }
+            if (readNVM(true) != rowData[i]) {
+                return PU_SEND_NVM_FAIL;
+            }
+            curAddr++;
+        }
+
+        if (curAddr != newAddr) {
+            resetPC = 1;
+            curAddr = newAddr;
+        }
+    }
+
+    if (curAddr > blockEnd) {
+        updateMemoryMap();
+    }
+
     curRow = curAddr & rowMask;
 
-    return done;
+    return ret == HFR_DATA_DONE ? PU_DONE : PU_SUCCESS;
 }
 
 void IotPicUpdater::sendByte(uint8_t byte) {
@@ -187,7 +235,10 @@ bool IotPicUpdater::updateMemoryMap() {
     return ret;
 }
 
-bool IotPicUpdater::sendNVM(uint16_t value) {
+void IotPicUpdater::sendNVM(uint16_t value) {
+    if (validating) {
+        return;
+    }
     //Update PC
     if (resetPC) {
         sendByte(PU_CMD_LOAD_PC);
@@ -204,10 +255,6 @@ bool IotPicUpdater::sendNVM(uint16_t value) {
     delayMicroseconds(1);
     sendValue(value);
     delayMicroseconds(1);
-
-    uint16_t readValue = readNVM(false);
-
-    return (readValue == value);
 }
 
 uint16_t IotPicUpdater::readNVM(bool inc) {

@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <IotHexFileReader.h>
 
+#define PU_DONE 1
 #define PU_SUCCESS 0
 #define PU_NEXT_DATA_FAIL -1
 #define PU_INV_START_ADDR -2
@@ -20,20 +21,22 @@
 
 class IotPicUpdater {
 public:
-    int init(File *f);
+    IotPicUpdater();
+    int validateFile(File *f);
     int sendNextRow();
-    int sendFile();
+    int sendFile(File *f);
     void getDeviceAndRevisionId(uint16_t *deviceId, uint16_t *revisionId);
     void enterProgramMode();
     void exitProgramMode();
+    void bulkErase();
+    uint8_t readMemory(uint16_t addr, uint8_t count, uint16_t *data);
 private:
     int initFile(File *f);
-    int validateFile();
     void sendByte(uint8_t byte);
     void sendValue(uint32_t value);
     void sendBytes(uint32_t bytes, uint8_t count);
     bool updateMemoryMap();
-    bool sendNVM(uint16_t value);
+    void sendNVM(uint16_t value);
     uint16_t readNVM(bool inc);
 
     FileReaderData curFileData;
@@ -43,7 +46,6 @@ private:
     uint16_t curAddr;
     uint8_t curDataPos;
     uint8_t resetPC;
-    uint8_t done;
     uint8_t validating;
 };
 

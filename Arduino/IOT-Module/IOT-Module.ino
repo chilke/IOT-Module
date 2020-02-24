@@ -12,12 +12,12 @@ bool apMode = false;
 bool otaRunning = false;
 
 void setup() {
-    pinMode(DELAY_TEST_PIN, OUTPUT);
-    digitalWrite(DELAY_TEST_PIN, 0);
+    pinMode(ICSP_CLK_PIN, INPUT);
+    pinMode(ICSP_DAT_PIN, INPUT);
     pinMode(ICSP_MCLR_PIN, OUTPUT);
     digitalWrite(ICSP_MCLR_PIN, 1);
     Logger.begin(LOG_LEVEL_DEBUG, LOG_UART, 115200);
-    Time.setOffset(-5);
+
     if (!SPIFFS.begin()) {
         Logger.error("SPIFFS begin failure!!");
     }

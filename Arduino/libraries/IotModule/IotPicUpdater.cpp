@@ -65,11 +65,14 @@ int IotPicUpdater::validateFile(File *f) {
 }
 
 void IotPicUpdater::enterProgramMode() {
+    //Should never be a problem, but make sure serial isn't using our PINs
+    Serial.pins(1,3);
+    digitalWrite(ICSP_MCLR_PIN, 0);
     pinMode(ICSP_CLK_PIN, OUTPUT);
     pinMode(ICSP_DAT_PIN, OUTPUT);
     digitalWrite(ICSP_CLK_PIN, 0);
     digitalWrite(ICSP_DAT_PIN, 0);
-    digitalWrite(ICSP_MCLR_PIN, 0);
+    
     delayMicroseconds(250);
     sendByte('M');
     sendByte('C');
@@ -78,6 +81,8 @@ void IotPicUpdater::enterProgramMode() {
 }
 
 void IotPicUpdater::exitProgramMode() {
+    pinMode(ICSP_CLK_PIN, INPUT);
+    pinMode(ICSP_DAT_PIN, INPUT);
     digitalWrite(ICSP_MCLR_PIN, 1);
 }
 
@@ -115,13 +120,14 @@ uint8_t IotPicUpdater::readMemory(uint16_t addr, uint8_t count, uint16_t *data) 
 }
 
 int IotPicUpdater::sendNextRow() {
-    uint16_t rowAddr[16];
-    uint16_t rowData[16];
+    uint16_t rowAddr[32];
+    uint16_t rowData[32];
     uint8_t rowPos = 0;
     uint16_t newAddr;
     uint16_t curVal;
     int ret = HFR_DATA_SUCCESS;
 
+    resetPC=1;
     while ((curAddr & rowMask) == curRow) {
         curVal = curFileData.data[curDataPos];
         curDataPos++;
@@ -130,7 +136,7 @@ int IotPicUpdater::sendNextRow() {
         rowData[rowPos] = curVal;
         rowAddr[rowPos] = curAddr;
         rowPos++;
-        Logger.debugf("sendNVM %04X %04X", curAddr, curVal);
+        // Logger.debugf("sendNVM %04X %04X", curAddr, curVal);
         sendNVM(curVal);
 
         curAddr++;
@@ -157,24 +163,29 @@ int IotPicUpdater::sendNextRow() {
     }
 
     if (!validating) {
+        // Logger.debugf("Before delay %lu", micros());
         sendByte(PU_CMD_COMMIT);
         delay(6);
+        // Logger.debugf("After delay %lu", micros());
 
         newAddr = curAddr;
 
         for (int i = 0; i < rowPos; i++) {
-            if (curAddr != rowAddr[0]) {
-                curAddr = rowAddr[0];
+            // Logger.debugf("curAddr: %04X, rowAddr: %04X", curAddr, rowAddr[i]);
+            if (curAddr != rowAddr[i]) {
+                // Logger.debug("Don't match");
+                curAddr = rowAddr[i];
                 resetPC = 1;
             }
-            if (readNVM(true) != rowData[i]) {
+            curVal=readNVM(true);
+            // Logger.debugf("Compare addr: %04X, %04X, %04X", curAddr, curVal, rowData[i]);
+            if (curVal != rowData[i]) {
                 return PU_SEND_NVM_FAIL;
             }
             curAddr++;
         }
 
         if (curAddr != newAddr) {
-            resetPC = 1;
             curAddr = newAddr;
         }
     }
@@ -259,9 +270,10 @@ void IotPicUpdater::sendNVM(uint16_t value) {
 
 uint16_t IotPicUpdater::readNVM(bool inc) {
     uint16_t ret = 0;
-
+    // Logger.debugf("Reading %04X", curAddr);
     //Update PC
     if (resetPC) {
+        // Logger.debug("Reseting PC");
         sendByte(PU_CMD_LOAD_PC);
         delayMicroseconds(1);
         sendValue(curAddr);

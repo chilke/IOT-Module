@@ -74,6 +74,10 @@ void sendNotFound() {
     WebServer.send(404, textContent, notFoundError);
 }
 
+void sendDone() {
+    WebServer.send(200, textContent, "Done");
+}
+
 void handleListdir() {
     Logger.debug("handleListdir()");
     WebServer.debug();
@@ -431,7 +435,7 @@ void handleCpu() {
         if (freq == 80 || freq == 160) {
             system_update_cpu_freq(freq);
 
-            WebServer.send(200, textContent, "Done");
+            sendDone();
         } else {
             sendNotAllowed();
         }
@@ -446,7 +450,7 @@ void handleEnter() {
 
     PicUpdater.enterProgramMode();
 
-    WebServer.send(200, textContent, "Done");
+    sendDone();
 }
 
 void handleExit() {
@@ -455,7 +459,7 @@ void handleExit() {
 
     PicUpdater.exitProgramMode();
 
-    WebServer.send(200, textContent, "Done");
+    sendDone();
 }
 
 void handleReadDeviceId() {
@@ -518,7 +522,7 @@ void handleBulkErase() {
 
     PicUpdater.bulkErase();
 
-    WebServer.send(200, textContent, "Done");
+    sendDone();
 }
 
 void handleNotFound() {

@@ -10,6 +10,7 @@
 #include <IotTime.h>
 #include <IotPicUpdater.h>
 #include <IotHexFileReader.h>
+#include <IotUtility.h>
 
 #define JSON_BUFFER_SIZE 1000
 
@@ -18,10 +19,9 @@
 #define LED_GREEN 0
 #define LED_RED 1
 
-#define DELAY_TEST_PIN 5
 #define ICSP_MCLR_PIN 12
-#define ICSP_CLK_PIN 13
-#define ICSP_DAT_PIN 14
+#define ICSP_CLK_PIN 15
+#define ICSP_DAT_PIN 13
 
 #define RESET_SAFEMODE_DATA {0xffeeeeff, 0xcbabcdef}
 #define RESET_SAFEMODE_ADDR sizeof(struct eboot_command)/4

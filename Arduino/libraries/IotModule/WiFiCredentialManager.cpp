@@ -15,17 +15,19 @@ void WiFiCredentialManager::load() {
         Logger.warn("/wifi_credentials.json does not exist");
         return;
     }
-    DynamicJsonBuffer jb(JSON_BUFFER_SIZE);
+    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
     File f = SPIFFS.open("/wifi_credentials.json", "r");
-    JsonArray& rootArr = jb.parseArray(f);
+    DeserializationError err = deserializeJson(doc, f);
 
-    if (!rootArr.success()) {
+    if (err) {
         Logger.error("WiFiCredentialManager::load() failed json parsing");
         return;
     }
 
+    JsonArray arr = doc.as<JsonArray>();
+
     _count = 0;
-    for (JsonObject& obj : rootArr) {
+    for (JsonObject obj : arr) {
         credentials[_count].ssid = obj["ssid"].as<String>();
         credentials[_count++].password = obj["password"].as<String>();
     }
@@ -33,17 +35,17 @@ void WiFiCredentialManager::load() {
 
 void WiFiCredentialManager::save() {
     Logger.debug("CredMan saving");
-    DynamicJsonBuffer jb(JSON_BUFFER_SIZE);
-    JsonArray& rootArr = jb.createArray();
+    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+    JsonArray rootArr = doc.to<JsonArray>();
 
     for (int i = 0; i < _count; i++) {
-        JsonObject& obj = rootArr.createNestedObject();
+        JsonObject obj = rootArr.createNestedObject();
         obj["ssid"] = credentials[i].ssid;
         obj["password"] = credentials[i].password;
     }
 
     File f = SPIFFS.open("/wifi_credentials.json", "w");
-    rootArr.printTo(f);
+    serializeJson(doc, f);
     f.close();
 }
 

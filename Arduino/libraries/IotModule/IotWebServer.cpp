@@ -84,21 +84,21 @@ void handleListdir() {
     WebServer.debug();
 
     if (WebServer.method() == HTTP_GET) {
-        DynamicJsonBuffer jb(JSON_BUFFER_SIZE);
+        DynamicJsonDocument doc(JSON_BUFFER_SIZE);
         String buffer = "";
         buffer.reserve(JSON_BUFFER_SIZE);
 
-        JsonArray& rootArr = jb.createArray();
+        JsonArray rootArr = doc.to<JsonArray>();
 
         Dir dir = SPIFFS.openDir("");
 
         while (dir.next()) {
-            JsonObject& obj = rootArr.createNestedObject();
+            JsonObject obj = rootArr.createNestedObject();
             obj["name"] = dir.fileName();
             obj["size"] = dir.fileSize();
         }
 
-        rootArr.printTo(buffer);
+        serializeJson(doc, buffer);
 
         WebServer.send(200, jsonContent, buffer);
     } else {
@@ -114,8 +114,8 @@ void handleCredentials() {
 
     if (m == HTTP_GET) {
         String buffer = "[";
-        DynamicJsonBuffer jb(JSON_BUFFER_SIZE);
-        JsonObject& obj = jb.createObject();
+        DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+        JsonObject obj = doc.to<JsonObject>();
         buffer.reserve(JSON_BUFFER_SIZE);
 
         for (int i = 0; i < WCM.savedNetworks(); i++) {
@@ -126,19 +126,19 @@ void handleCredentials() {
             obj["ssid"] = WCM.savedSsid(i);
             obj["password"] = WCM.savedPassword(i);
 
-            obj.printTo(buffer);
+            serializeJson(doc, buffer);
         }
 
         buffer += "]";
 
         WebServer.send(200, jsonContent, buffer);
     } else if (m == HTTP_POST) {
-        DynamicJsonBuffer jb(JSON_BUFFER_SIZE);
-        JsonObject& obj = jb.parseObject(WebServer.arg("plain"));
+        DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+        DeserializationError err = deserializeJson(doc, WebServer.arg("plain"));
 
-        if (obj.success() && obj.containsKey("ssid")) {
-            String ssid = obj["ssid"];
-            String password = obj["password"];
+        if (!err && doc.containsKey("ssid")) {
+            String ssid = doc["ssid"];
+            String password = doc["password"];
             String resp = "{\"status\":\"Connect Failed\"}";
             if (WCM.tryConnect(ssid, password)) {
                 resp = successBody;
@@ -172,11 +172,11 @@ void handleScanNetworks() {
     if (WebServer.method() == HTTP_GET) {
         WiFiScanInfo *info = WCM.scan();
         WiFiScanInfo *cur = info;
-        DynamicJsonBuffer jb(JSON_BUFFER_SIZE);
+        DynamicJsonDocument doc(JSON_BUFFER_SIZE);
         String buffer = "";
         buffer.reserve(JSON_BUFFER_SIZE);
 
-        JsonObject& obj = jb.createObject();
+        JsonObject obj = doc.to<JsonObject>();
 
         WebServer.setContentLength(CONTENT_LENGTH_UNKNOWN);
         WebServer.send(200, jsonContent, "");
@@ -191,7 +191,7 @@ void handleScanNetworks() {
             obj["channel"] = cur->channel;
             obj["hidden"] = cur->hidden;
 
-            obj.printTo(buffer);
+            serializeJson(doc, buffer);
 
             WebServer.sendContent(buffer);
 
@@ -220,12 +220,12 @@ void handleNetwork() {
     WebServer.debug();
 
     if (WebServer.method() == HTTP_GET) {
-        DynamicJsonBuffer jb(JSON_BUFFER_SIZE);
+        DynamicJsonDocument doc(JSON_BUFFER_SIZE);
         String buffer = "[";
 
         buffer.reserve(JSON_BUFFER_SIZE);
 
-        JsonObject& obj = jb.createObject();
+        JsonObject obj = doc.to<JsonObject>();
 
         obj["if"] = "STATION";
         obj["enabled"] = (bool)(WiFi.getMode() & WIFI_STA);
@@ -236,7 +236,7 @@ void handleNetwork() {
         obj["rssi"] = WiFi.RSSI();
         obj["ip"] = WiFi.localIP().toString();
 
-        obj.printTo(buffer);
+        serializeJson(doc, buffer);
 
         buffer += ",";
 
@@ -250,7 +250,7 @@ void handleNetwork() {
         obj["ip"] = WiFi.softAPIP().toString();
         obj["numConnected"] = WiFi.softAPgetStationNum();
 
-        obj.printTo(buffer);
+        serializeJson(doc, buffer);
 
         buffer += "]";
 
@@ -265,8 +265,8 @@ void handleDebugInfo() {
     WebServer.debug();
 
     if (WebServer.method() == HTTP_GET) {
-        DynamicJsonBuffer jb(JSON_BUFFER_SIZE);
-        JsonObject& obj = jb.createObject();
+        DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+        JsonObject obj = doc.to<JsonObject>();
         String buffer = "";
         uint32_t u32;
         uint16_t u16;
@@ -287,16 +287,15 @@ void handleDebugInfo() {
         obj["freeSketchSpace"] = ESP.getFreeSketchSpace();
         obj["vcc"] = ESP.getVcc();
         SPIFFS.info(fsInfo);
-        JsonObject& obj2 = jb.createObject();
+        JsonObject obj2 = obj.createNestedObject("fsInfo");
         obj2["totalBytes"] = fsInfo.totalBytes;
         obj2["usedBytes"] = fsInfo.usedBytes;
         obj2["blockSize"] = fsInfo.blockSize;
         obj2["pageSize"] = fsInfo.pageSize;
         obj2["maxOpenFiles"] = fsInfo.maxOpenFiles;
         obj2["maxPathLength"] = fsInfo.maxPathLength;
-        obj["fsInfo"] = obj2;
 
-        obj.printTo(buffer);
+        serializeJson(doc, buffer);
         WebServer.send(200, jsonContent, buffer);
     } else {
         sendNotAllowed();
@@ -308,31 +307,35 @@ void handleLogger() {
     WebServer.debug();
 
     if (WebServer.method() == HTTP_POST) {
-        DynamicJsonBuffer jb(JSON_BUFFER_SIZE);
-        JsonObject& obj = jb.parseObject(WebServer.arg("plain"));
+        DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+        DeserializationError err = deserializeJson(doc, WebServer.arg("plain"));
 
-        uint16_t port = obj["tcpPort"];
-        if (port != 0) {
-            Logger.debugf("Setting port: %i", port);
-            Logger.setTcpPort(port);
-        }
-        String ipStr = obj["ip"];
-        if (ipStr.length() != 0) {
-            IPAddress ip;
-            if (ip.fromString(ipStr)) {
-                Logger.debugf("Setting IP: %s", ipStr.c_str());
-                Logger.setIP(ip);
+        if (!err) {
+            uint16_t port = doc["tcpPort"];
+            if (port != 0) {
+                Logger.debugf("Setting port: %i", port);
+                Logger.setTcpPort(port);
             }
-        }
-        if (obj.containsKey("tcp")) {
-            if (obj["tcp"]) {
-                Logger.enableLog(LOG_TCP);
-            } else {
-                Logger.disableLog(LOG_TCP);
+            String ipStr = doc["ip"];
+            if (ipStr.length() != 0) {
+                IPAddress ip;
+                if (ip.fromString(ipStr)) {
+                    Logger.debugf("Setting IP: %s", ipStr.c_str());
+                    Logger.setIP(ip);
+                }
             }
-        }
+            if (doc.containsKey("tcp")) {
+                if (doc["tcp"]) {
+                    Logger.enableLog(LOG_TCP);
+                } else {
+                    Logger.disableLog(LOG_TCP);
+                }
+            }
 
-        WebServer.send(200, jsonContent, successBody);
+            WebServer.send(200, jsonContent, successBody);
+        } else {
+            sendNotAllowed();
+        }
     } else {
         sendNotAllowed();
     }
@@ -472,8 +475,8 @@ void handleReadDeviceId() {
 
     PicUpdater.getDeviceAndRevisionId(&deviceId, &revisionId);
 
-    DynamicJsonBuffer jb(JSON_BUFFER_SIZE);
-    JsonObject& obj = jb.createObject();
+    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+    JsonObject obj = doc.to<JsonObject>();
     String buffer = "";
     buffer.reserve(JSON_BUFFER_SIZE);
 
@@ -485,7 +488,7 @@ void handleReadDeviceId() {
     sprintf(cStr, "%04X", revisionId);
     obj["revisionId"] = String(cStr);
 
-    obj.printTo(buffer);
+    serializeJson(doc, buffer);
     WebServer.send(200, jsonContent, buffer);
 }
 

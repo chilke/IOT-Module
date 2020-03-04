@@ -6,14 +6,17 @@
 //TODO add logic to reconnect when ip or port is updated
 //TODO move initial connect logic to within enableLog, setIP, setTcpPort functions
 
-void IotLogger::begin(unsigned int level, unsigned int enabledLogs, unsigned int baud) {
+void IotLogger::init() {
+    
+}
+
+void IotLogger::begin(unsigned int level, unsigned int enabledLogs) {
     loggerLevel = level;
     this->enabledLogs = enabledLogs;
     ip = IPADDR_NONE;
     tcpPort = 54321;
 
     if (enabledLogs & LOG_UART) {
-        Serial.begin(baud);
         Serial.println();
     }
 }
@@ -163,7 +166,7 @@ int IotLogger::getLogHeader(char *s, int size, const char *levelName) {
         size -= l;
         s += l;
 
-        return snprintf(s, size, " %s: ", levelName);
+        return l+snprintf(s, size, " %s: ", levelName);
     }
 
     return size;

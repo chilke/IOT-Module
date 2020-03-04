@@ -12,23 +12,6 @@ void IotHexFileReader::init(File *f) {
     bufSize = 0;
 }
 
-uint32_t IotHexFileReader::htoin(char *hex, int count) {
-    uint32_t ret = 0;
-
-    for (int i = 0; i < count; i++) {
-        ret <<= 4;
-        if (hex[i] >= '0' && hex[i] <= '9') {
-            ret += hex[i] - '0';
-        } else if (hex[i] >= 'a' && hex[i] <= 'f') {
-            ret += hex[i] - 'a'+10;
-        } else {
-            ret += hex[i] - 'A'+10;
-        }
-    }
-
-    return ret;
-}
-
 void IotHexFileReader::readMoreData() {
     uint8_t i = 0;
     while (bufPos < bufSize) {
@@ -54,14 +37,14 @@ int IotHexFileReader::getNextData(FileReaderData *data) {
 
     bufPos++;
 
-    uint32_t len = htoin(&buffer[bufPos], 2);
+    uint32_t len = htoi32n(&buffer[bufPos], 2);
     if (len > sizeof(data->data) || (len & 1) != 0) {
         return HFR_INVALID_LENGTH;
     }
     bufPos+=2;
-    uint32_t addr = htoin(&buffer[bufPos], 4);
+    uint32_t addr = htoi32n(&buffer[bufPos], 4);
     bufPos+=4;
-    uint32_t type = htoin(&buffer[bufPos], 2);
+    uint32_t type = htoi32n(&buffer[bufPos], 2);
     bufPos+=2;
 
     readMoreData();
@@ -69,7 +52,7 @@ int IotHexFileReader::getNextData(FileReaderData *data) {
     if (type == 1) {
         return HFR_DATA_DONE;
     } else if (type == 4) {
-        baseAddress = htoin(&buffer[bufPos], 4);
+        baseAddress = htoi32n(&buffer[bufPos], 4);
         baseAddress <<= 16;
         bufPos+=7; //7 here to account for checksum and single line terminator
         if (buffer[bufPos] == 0x0A) {
@@ -87,7 +70,7 @@ int IotHexFileReader::getNextData(FileReaderData *data) {
                 }
             }
 
-            data->data[i] = htoin(&buffer[bufPos], 2);
+            data->data[i] = htoi8n(&buffer[bufPos], 2);
             bufPos += 2;
         }
         readMoreData();

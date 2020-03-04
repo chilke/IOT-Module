@@ -32,6 +32,7 @@ IotWebServer::IotWebServer(int port)
     on("/read_device_id", handleReadDeviceId);
     on("/read", handleReadMemory);
     on("/bulk_erase", handleBulkErase);
+    on("/send_command", handleSendCommand);
 
     onNotFound(handleNotFound);
 }
@@ -523,6 +524,28 @@ void handleBulkErase() {
     PicUpdater.bulkErase();
 
     sendDone();
+}
+
+void handleSendCommand() {
+    Logger.debug("handleSendCommand()");
+    WebServer.debug();
+
+    uint8_t ret;
+
+    if (WebServer.hasArg("command")) {
+        uint8_t command = WebServer.arg("command").toInt();
+
+        if (WebServer.hasArg("value")) {
+            uint16_t value = WebServer.arg("value").toInt();
+            ret = UartComm.sendCommandWithValue(command, value);
+        } else {
+            ret = UartComm.sendCommand(command);
+        }
+
+        WebServer.send(200, textContent, String(ret));
+    } else {
+        sendNotAllowed();
+    }
 }
 
 void handleNotFound() {

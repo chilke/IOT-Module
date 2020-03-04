@@ -9,6 +9,7 @@
 #include <IotWebServer.h>
 #include <IotTime.h>
 #include <IotPicUpdater.h>
+#include <IotUartComm.h>
 #include <IotHexFileReader.h>
 #include <IotUtility.h>
 

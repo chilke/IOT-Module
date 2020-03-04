@@ -19,7 +19,8 @@
 
 class IotLogger {
 public:
-    void begin(unsigned int level, unsigned int enabledLogs, unsigned int baud);
+    void init();
+    void begin(unsigned int level, unsigned int enabledLogs);
     void dump(uint8_t *d, uint size);
     void debug(const char *s);
     void info(const char *s);

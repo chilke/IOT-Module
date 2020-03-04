@@ -16,7 +16,9 @@ void setup() {
     pinMode(ICSP_DAT_PIN, INPUT);
     pinMode(ICSP_MCLR_PIN, OUTPUT);
     digitalWrite(ICSP_MCLR_PIN, 1);
-    Logger.begin(LOG_LEVEL_DEBUG, LOG_UART, 115200);
+    Serial.begin(115200);
+    Time.setOffset(-6*3600);
+    Logger.begin(LOG_LEVEL_DEBUG, LOG_UART);
 
     if (!SPIFFS.begin()) {
         Logger.error("SPIFFS begin failure!!");

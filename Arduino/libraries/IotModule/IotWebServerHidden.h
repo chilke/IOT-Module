@@ -17,6 +17,7 @@ void handleExit();
 void handleReadDeviceId();
 void handleReadMemory();
 void handleBulkErase();
+void handleSendCommand();
 void handleNotFound();
 
 #endif

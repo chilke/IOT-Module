@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 #include <RealTime.h>
 
 static uint8_t daysPerMonth[2][13] = {
@@ -32,6 +34,7 @@ int RealTime::toBuffer(uint32_t epochSeconds, uint16_t milliSeconds, char *buf, 
 void RealTime::updateTime(uint32_t epochSeconds) {
     epochSeconds += offset;
     int32_t diff = epochSeconds-lastSeconds;
+    lastSeconds = epochSeconds;
 
     if (diff < 0 || diff > 195) { //195 because we could overrun the uint8 second field
         year = 2001;
@@ -41,11 +44,8 @@ void RealTime::updateTime(uint32_t epochSeconds) {
         minute = 0;
         second = 0;
 
-        epochSeconds += offset;
-
         uint32_t days = epochSeconds / SECONDS_PER_DAY;
         epochSeconds -= days*SECONDS_PER_DAY;
-
         calcDate(days);
         calcTime(epochSeconds);
     } else {
@@ -70,6 +70,7 @@ void RealTime::updateTime(uint32_t epochSeconds) {
 
                         if (month > 12) {
                             month = 1;
+                            year++;
                         }
                     }
                 }
@@ -87,7 +88,6 @@ void RealTime::calcDate(uint32_t days) {
     }
 
     days = calcYear(days);
-
     calcMonthAndDay(days);
 }
 
@@ -124,13 +124,13 @@ void RealTime::calcMonthAndDay(uint32_t days) {
     uint8_t leap = isLeapYear();
     uint8_t i = 1;
 
-    while (days > daysPerMonth[leap][i]) {
+    while (days >= daysPerMonth[leap][i]) {
         days -= daysPerMonth[leap][i];
         i++;
     }
 
     month = i;
-    day = days;
+    day = days+1;
 }
 
 void RealTime::calcTime(uint32_t seconds) {

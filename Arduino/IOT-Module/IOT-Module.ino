@@ -1,6 +1,6 @@
 #include <Arduino.h>
-#include <ArduinoOTA.h>
 #include <ESP8266WiFi.h>
+#include <time.h>
 #include <FS.h>
 
 #include <IotModule.h>
@@ -18,11 +18,13 @@ void setup() {
     digitalWrite(ICSP_MCLR_PIN, 1);
     Serial.begin(115200);
     Time.setOffset(-6*3600);
-    Logger.begin(LOG_LEVEL_DEBUG, LOG_UART);
 
     if (!SPIFFS.begin()) {
-        Logger.error("SPIFFS begin failure!!");
+        Serial.println("SPIFFS failure");
+        while (1);
     }
+
+    Logger.init();
 
     {
         uint32_t buf[RESET_SAFEMODE_SIZE];
@@ -88,10 +90,14 @@ void setup() {
     } else {
         WCM.begin(apMode);
         WebServer.begin();
+        Mqtt.init();
     }
 
-    otaSetup();
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
 }
+
+time_t now;
+time_t nowish = 1510592825;
 
 void loop() {
     /*  Handle connection manager events  */
@@ -100,52 +106,11 @@ void loop() {
         WebServer.handleClient();
 
         if (WiFi.status() == WL_CONNECTED) {
-            Time.handle();
+            now = time(nullptr);
+            if (now > nowish) {
+            //Time.handle();
+                Mqtt.handle();
+            }
         }
     }
-
-    ArduinoOTA.handle();
-}
-
-void otaSetup() {
-    ArduinoOTA.onStart(otaStart);
-    ArduinoOTA.onProgress(otaProgress);
-    ArduinoOTA.onEnd(otaEnd);
-    ArduinoOTA.onError(otaError);
-    ArduinoOTA.begin();
-}
-
-void otaStart() {
-    Logger.info("OTA Starting Update");
-    otaRunning = true;
-    /* Need to add logic to disable other processing here */
-}
-
-void otaProgress(unsigned int progress, unsigned int total) {
-    Logger.debugf("OTA Progress: %u/%u - %u%%", progress, total, (progress / (total / 100)));
-}
-
-void otaEnd() {
-    otaRunning = false;
-}
-
-void otaError(ota_error_t error) {
-    switch (error) {
-        case OTA_AUTH_ERROR:
-        Logger.error("OTA Auth Failed");
-        break;
-        case OTA_BEGIN_ERROR:
-        Logger.error("OTA Begin Failed");
-        break;
-        case OTA_CONNECT_ERROR:
-        Logger.error("OTA Connect Failed");
-        break;
-        case OTA_RECEIVE_ERROR:
-        Logger.error("OTA Receive Failed");
-        break;
-        case OTA_END_ERROR:
-        Logger.error("OTA End Failed");
-        break;
-    }
-    otaRunning = false;
 }

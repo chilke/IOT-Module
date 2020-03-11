@@ -22,15 +22,15 @@
 class IotPicUpdater {
 public:
     IotPicUpdater();
-    int validateFile(File *f);
     int sendNextRow();
     int sendFile(File *f);
     void getDeviceAndRevisionId(uint16_t *deviceId, uint16_t *revisionId);
+    uint8_t readMemory(uint16_t addr, uint8_t count, uint16_t *data);
+private:
     void enterProgramMode();
     void exitProgramMode();
     void bulkErase();
-    uint8_t readMemory(uint16_t addr, uint8_t count, uint16_t *data);
-private:
+    int sendFileData(File *f);
     int initFile(File *f);
     void sendByte(uint8_t byte);
     void sendValue(uint32_t value);

@@ -10,6 +10,7 @@
 #include <IotTime.h>
 #include <IotPicUpdater.h>
 #include <IotUartComm.h>
+#include <IotMqtt.h>
 #include <IotHexFileReader.h>
 #include <IotUtility.h>
 

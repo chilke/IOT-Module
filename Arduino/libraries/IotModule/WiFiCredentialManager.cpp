@@ -31,6 +31,8 @@ void WiFiCredentialManager::load() {
         credentials[_count].ssid = obj["ssid"].as<String>();
         credentials[_count++].password = obj["password"].as<String>();
     }
+
+    f.close();
 }
 
 void WiFiCredentialManager::save() {

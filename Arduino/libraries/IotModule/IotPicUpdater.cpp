@@ -31,7 +31,7 @@ int IotPicUpdater::initFile(File *f) {
     return PU_SUCCESS;
 }
 
-int IotPicUpdater::sendFile(File *f) {
+int IotPicUpdater::sendFileData(File *f) {
     int ret;
 
     ret = initFile(f);
@@ -49,19 +49,35 @@ int IotPicUpdater::sendFile(File *f) {
     return ret;
 }
 
+int IotPicUpdater::sendFile(File *f) {
+    int ret;
+    validating = 1;
+    ret = sendFileData(f);
+    validating = 0;
+    if (ret != PU_DONE) {
+        return ret;
+    }
+    enterProgramMode();
+    bulkErase();
+    ret = sendFileData(f);
+    if (ret != PU_DONE) {
+        bulkErase();
+        ret = sendFileData(f);
+        if (ret != PU_DONE) {
+            bulkErase();
+        }
+    }
+    exitProgramMode();
+    return ret;
+}
+
 void IotPicUpdater::getDeviceAndRevisionId(uint16_t *deviceId, uint16_t *revisionId) {
+    enterProgramMode();
     resetPC = 1;
     curAddr = 0x8005;
     *revisionId = readNVM(true);
     *deviceId = readNVM(false);
-}
-
-int IotPicUpdater::validateFile(File *f) {
-    int ret;
-    validating = 1;
-    ret = sendFile(f);
-    validating = 0;
-    return ret;
+    exitProgramMode();
 }
 
 void IotPicUpdater::enterProgramMode() {
@@ -98,9 +114,8 @@ void IotPicUpdater::bulkErase() {
 }
 
 uint8_t IotPicUpdater::readMemory(uint16_t addr, uint8_t count, uint16_t *data) {
-    if (addr != curAddr) {
-        resetPC = 1;
-    }
+    enterProgramMode();
+    resetPC = 1;
     curAddr = addr;
 
     if (!updateMemoryMap()) {
@@ -115,6 +130,8 @@ uint8_t IotPicUpdater::readMemory(uint16_t addr, uint8_t count, uint16_t *data) 
         data[i] = readNVM(true);
         curAddr++;
     }
+
+    exitProgramMode();
 
     return count;
 }

@@ -1,20 +1,53 @@
 #include <Arduino.h>
-#include <IotTime.h>
+#include <FS.h>
+#include <ArduinoJson.h>
+#include <IotModule.h>
 #include <IotLogger.h>
 
-//TODO add logic to disconnect when tcp logging is disabled
-//TODO add logic to reconnect when ip or port is updated
-//TODO move initial connect logic to within enableLog, setIP, setTcpPort functions
-
 void IotLogger::init() {
-    
+    loggerLevel = LOG_LEVEL_DEBUG;
+    enabledLogs = LOG_UART;
+    ip = IPADDR_NONE;
+    port = 54321;
+
+    if (SPIFFS.exists("/logger_config.json")) {
+        DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+        File f = SPIFFS.open("/logger_config.json", "r");
+        DeserializationError err = deserializeJson(doc, f);
+
+        if (!err) {
+            loggerLevel = doc["loggerLevel"];
+            enabledLogs = doc["enabledLogs"];
+            String ipStr = doc["ip"];
+            ip.fromString(ipStr);
+            port = doc["port"];
+        }
+
+        f.close();
+    }
+
+    if (enabledLogs & LOG_UART) {
+        Serial.println();
+    }
+}
+
+void IotLogger::persist() {
+    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+    doc["loggerLevel"] = loggerLevel;
+    doc["enabledLogs"] = enabledLogs;
+    doc["ip"] = ip.toString();
+    doc["port"] = port;
+
+    File f = SPIFFS.open("/logger_config.json", "w");
+    serializeJson(doc, f);
+    f.close();
 }
 
 void IotLogger::begin(unsigned int level, unsigned int enabledLogs) {
     loggerLevel = level;
     this->enabledLogs = enabledLogs;
     ip = IPADDR_NONE;
-    tcpPort = 54321;
+    port = 54321;
 
     if (enabledLogs & LOG_UART) {
         Serial.println();
@@ -22,11 +55,17 @@ void IotLogger::begin(unsigned int level, unsigned int enabledLogs) {
 }
 
 void IotLogger::setIP(IPAddress ip) {
+    if (tcpClient.connected()) {
+        tcpClient.stop();
+    }
     this->ip = ip;
 }
 
-void IotLogger::setTcpPort(uint16_t port) {
-    tcpPort = port;
+void IotLogger::setPort(uint16_t port) {
+    if (tcpClient.connected()) {
+        tcpClient.stop();
+    }
+    this->port = port;
 }
 
 void IotLogger::enableLog(unsigned int log) {
@@ -35,6 +74,20 @@ void IotLogger::enableLog(unsigned int log) {
 
 void IotLogger::disableLog(unsigned int log) {
     enabledLogs &= ~log;
+}
+
+void IotLogger::setLevel(String level) {
+    if (level == "debug") {
+        loggerLevel = LOG_LEVEL_DEBUG;
+    } else if (level == "info") {
+        loggerLevel = LOG_LEVEL_INFO;
+    } else if (level == "warn") {
+        loggerLevel = LOG_LEVEL_WARN;
+    } else if (level == "error") {
+        loggerLevel = LOG_LEVEL_ERROR;
+    } else if (level == "none") {
+        loggerLevel = LOG_LEVEL_NONE;
+    }
 }
 
 void IotLogger::dump(uint8_t *d, uint size) {
@@ -147,13 +200,13 @@ void IotLogger::write(const char *s) {
 
     if (enabledLogs & LOG_TCP && ip != IPADDR_NONE) {
         if (!tcpClient.connected()) {
-            tcpClient.connect(ip, tcpPort);
+            tcpClient.connect(ip, port);
         }
 
         if (tcpClient.connected()) {
             tcpClient.print(s);
             yield();
-        } else {
+        } else if (enabledLogs & LOG_UART) {
             Serial.println("Logger failed to connect");
         }
     }

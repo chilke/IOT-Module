@@ -27,14 +27,14 @@ IotWebServer::IotWebServer(int port)
     on("/upload", handleUpload);
     on("/send_file", handleSendFile);
     on("/cpu", handleCpu);
-    on("/enter", handleEnter);
-    on("/exit", handleExit);
     on("/read_device_id", handleReadDeviceId);
     on("/read", handleReadMemory);
-    on("/bulk_erase", handleBulkErase);
     on("/send_command", handleSendCommand);
+    on("/publish", handlePublish);
 
     onNotFound(handleNotFound);
+
+    httpUpdater.setup(this);
 }
 
 String IotWebServer::methodName() {
@@ -311,10 +311,10 @@ void handleLogger() {
         DeserializationError err = deserializeJson(doc, WebServer.arg("plain"));
 
         if (!err) {
-            uint16_t port = doc["tcpPort"];
+            uint16_t port = doc["port"];
             if (port != 0) {
                 Logger.debugf("Setting port: %i", port);
-                Logger.setTcpPort(port);
+                Logger.setPort(port);
             }
             String ipStr = doc["ip"];
             if (ipStr.length() != 0) {
@@ -331,6 +331,17 @@ void handleLogger() {
                     Logger.disableLog(LOG_TCP);
                 }
             }
+            if (doc.containsKey("uart")) {
+                if (doc["uart"]) {
+                    Logger.enableLog(LOG_UART);
+                } else {
+                    Logger.disableLog(LOG_UART);
+                }
+            }
+
+            Logger.setLevel(doc["level"]);
+
+            Logger.persist();
 
             WebServer.send(200, jsonContent, successBody);
         } else {
@@ -413,13 +424,7 @@ void handleSendFile() {
         String fileName = WebServer.arg("file");
         if (SPIFFS.exists(fileName)) {
             File f = SPIFFS.open(fileName, "r");
-            int ret;
-            if (WebServer.hasArg("validate")) {
-                Logger.debug("Validating");
-                ret = PicUpdater.validateFile(&f);
-            } else {
-                ret = PicUpdater.sendFile(&f);
-            }
+            int ret = PicUpdater.sendFile(&f);
             WebServer.send(200, textContent, String(ret));
         } else {
             sendNotFound();
@@ -446,24 +451,6 @@ void handleCpu() {
     } else {
         sendNotAllowed();
     }
-}
-
-void handleEnter() {
-    Logger.debug("handleEnter()");
-    WebServer.debug();
-
-    PicUpdater.enterProgramMode();
-
-    sendDone();
-}
-
-void handleExit() {
-    Logger.debug("handleExit()");
-    WebServer.debug();
-
-    PicUpdater.exitProgramMode();
-
-    sendDone();
 }
 
 void handleReadDeviceId() {
@@ -520,15 +507,6 @@ void handleReadMemory() {
     }
 }
 
-void handleBulkErase() {
-    Logger.debug("handleBulkErase()");
-    WebServer.debug();
-
-    PicUpdater.bulkErase();
-
-    sendDone();
-}
-
 void handleSendCommand() {
     Logger.debug("handleSendCommand()");
     WebServer.debug();
@@ -549,6 +527,15 @@ void handleSendCommand() {
     } else {
         sendNotAllowed();
     }
+}
+
+void handlePublish() {
+    Logger.debug("handlePublish()");
+    WebServer.debug();
+
+    uint8_t ret = Mqtt.publishMessage("Test Message");
+
+    WebServer.send(200, textContent, String(ret));
 }
 
 void handleNotFound() {

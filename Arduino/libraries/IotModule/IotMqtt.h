@@ -14,7 +14,7 @@ class IotMqtt {
 public:
     uint8_t publishMessage(String message);
     uint8_t getMessage(String &message);
-    void init();
+    void begin();
     void handle();
 private:
     void connect();

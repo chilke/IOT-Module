@@ -17,7 +17,6 @@ void setup() {
     pinMode(ICSP_MCLR_PIN, OUTPUT);
     digitalWrite(ICSP_MCLR_PIN, 1);
     Serial.begin(115200);
-    Time.setOffset(-6*3600);
 
     if (!SPIFFS.begin()) {
         Serial.println("SPIFFS failure");
@@ -90,14 +89,10 @@ void setup() {
     } else {
         WCM.begin(apMode);
         WebServer.begin();
-        Mqtt.init();
+        Mqtt.begin();
+        Time.begin();
     }
-
-    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
 }
-
-time_t now;
-time_t nowish = 1510592825;
 
 void loop() {
     /*  Handle connection manager events  */
@@ -106,9 +101,7 @@ void loop() {
         WebServer.handleClient();
 
         if (WiFi.status() == WL_CONNECTED) {
-            now = time(nullptr);
-            if (now > nowish) {
-            //Time.handle();
+            if (Time.isSet()) {
                 Mqtt.handle();
             }
         }

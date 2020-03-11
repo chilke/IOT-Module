@@ -71,7 +71,7 @@ uint8_t IotMqtt::publishMessage(String message) {
     return MQTT_FAILURE;
 }
 
-void IotMqtt::init() {
+void IotMqtt::begin() {
     cert.append(cacert);
     client_crt.append(client_cert);
     key.parse(privkey);

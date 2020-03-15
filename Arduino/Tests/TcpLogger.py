@@ -22,5 +22,5 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                     else:
                         s += c.decode('utf-8')[0]
                 except:
-                    pass
+                    conn.close()
             print(s)

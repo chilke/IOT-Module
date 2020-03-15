@@ -311,10 +311,15 @@ void handleLogger() {
         DeserializationError err = deserializeJson(doc, WebServer.arg("plain"));
 
         if (!err) {
-            uint16_t port = doc["port"];
+            uint16_t port = doc["tcpPort"];
             if (port != 0) {
-                Logger.debugf("Setting port: %i", port);
-                Logger.setPort(port);
+                Logger.debugf("Setting tcp port: %i", port);
+                Logger.setTcpPort(port);
+            }
+            port = doc["udpPort"];
+            if (port != 0) {
+                Logger.debugf("Setting udp port: %i", port);
+                Logger.setUdpPort(port);
             }
             String ipStr = doc["ip"];
             if (ipStr.length() != 0) {
@@ -329,6 +334,13 @@ void handleLogger() {
                     Logger.enableLog(LOG_TCP);
                 } else {
                     Logger.disableLog(LOG_TCP);
+                }
+            }
+            if (doc.containsKey("udp")) {
+                if (doc["udp"]) {
+                    Logger.enableLog(LOG_UDP);
+                } else {
+                    Logger.disableLog(LOG_UDP);
                 }
             }
             if (doc.containsKey("uart")) {
@@ -533,7 +545,7 @@ void handlePublish() {
     Logger.debug("handlePublish()");
     WebServer.debug();
 
-    uint8_t ret = Mqtt.publishMessage("Test Message");
+    uint8_t ret = Mqtt.publishMessage("{\"Message\":\"Test Message\"}");
 
     WebServer.send(200, textContent, String(ret));
 }

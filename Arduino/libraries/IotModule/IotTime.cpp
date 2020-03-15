@@ -1,4 +1,5 @@
 #include <time.h>
+#include <TZ.h>
 #include <coredecls.h>
 
 #include <IotModule.h>
@@ -12,7 +13,7 @@ void todSet() {
 void IotTime::begin() {
     set = false;
     settimeofday_cb(todSet);
-    configTime("GMT0", NTP_HOST_0, NTP_HOST_1, NTP_HOST_2);
+    configTime(TZ_America_Chicago, NTP_HOST_0, NTP_HOST_1, NTP_HOST_2);
 }
 
 void IotTime::timeSet() {
@@ -24,7 +25,11 @@ bool IotTime::isSet() {
 }
 
 int IotTime::curTimeToBuffer(char *buf, int size) {
-    return snprintf(buf, size, "Current Time");
+    time_t now = time(nullptr);
+    tm* localTm = localtime(&now);
+    return snprintf(buf, size, "%02d/%02d/%04d %02d:%02d:%02d",
+        localTm->tm_mon+1, localTm->tm_mday, localTm->tm_year+1900,
+        localTm->tm_hour, localTm->tm_min, localTm->tm_sec);
 }
 
 IotTime Time;

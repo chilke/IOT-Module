@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <WiFiClient.h>
+#include <WiFiUdp.h>
 
 #define LOGGER_BUFLEN 101
 
@@ -13,8 +14,9 @@
 #define LOG_LEVEL_DEBUG 4
 #define LOG_LEVEL_ALL 4
 
-#define LOG_UART 1
-#define LOG_TCP 2
+#define LOG_UART 1<<0
+#define LOG_TCP 1<<1
+#define LOG_UDP 1<<2
 
 class IotLogger {
 public:
@@ -30,7 +32,8 @@ public:
     void warnf(const char *f, ...);
     void errorf(const char *f, ...);
     void setIP(IPAddress ip);
-    void setPort(uint16_t port);
+    void setTcpPort(uint16_t port);
+    void setUdpPort(uint16_t port);
     void enableLog(unsigned int log);
     void disableLog(unsigned int log);
     void setLevel(String level);
@@ -43,8 +46,10 @@ private:
     uint8_t loggerLevel;
     uint8_t enabledLogs;
     IPAddress ip;
-    uint16_t port;
+    uint16_t tcpPort;
+    uint16_t udpPort;
     WiFiClient tcpClient;
+    WiFiUDP udpClient;
 };
 
 extern IotLogger Logger;

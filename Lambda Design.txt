@@ -1,0 +1,44 @@
+DynamoDB
+    ClientID
+    DeviceType
+    DeviceInfo
+        Location
+        Name
+
+IotDevice MQTT Handler Function, called only after time is synced and wifi connected
+    If not connected and time to retry
+        Connect to MQTT
+        Clear response timer
+        Clear send response flag
+        Subscribe to topic t/{ClientID}/out
+        Subscribe to topic t/allDevices/out
+        Set heartbeat timer to fire now
+    else if connected
+        if reponse timer timed out
+            Disconnect
+        else if heartbeat timed out
+            Send heartbeat message
+            Set response timer
+        else if send response
+            Send response
+
+IotDevice Message Received Callback
+    If message type is request:
+        Process any required data updates
+        Set send response flag
+    else:
+        Clear response timer
+
+Lambda iotHandlerFunction
+    On receipt of message check "Command"
+    if "req device info"
+        retrieve device details from dynamo
+            including schedule information
+        return over topic t/{ClientID}/out
+
+Connected/Disconnected messages forward to any active app clients
+
+App client queries all devices on connect then receives live updates of all device related events
+
+Lambda should know whether an app client is active to know when to forward data or not.
+This can be done through a combination of connect/disconnect and/or subscribe/unsubscribe lifecycle events along with some timed query to ensure it is still active.

@@ -8,7 +8,8 @@ void IotLogger::init() {
     loggerLevel = LOG_LEVEL_DEBUG;
     enabledLogs = LOG_UART;
     ip = IPADDR_NONE;
-    port = 54321;
+    tcpPort = 54321;
+    udpPort = 12345;
 
     if (SPIFFS.exists("/logger_config.json")) {
         DynamicJsonDocument doc(JSON_BUFFER_SIZE);
@@ -20,7 +21,8 @@ void IotLogger::init() {
             enabledLogs = doc["enabledLogs"];
             String ipStr = doc["ip"];
             ip.fromString(ipStr);
-            port = doc["port"];
+            tcpPort = doc["tcpPort"];
+            udpPort = doc["udpPort"];
         }
 
         f.close();
@@ -36,22 +38,12 @@ void IotLogger::persist() {
     doc["loggerLevel"] = loggerLevel;
     doc["enabledLogs"] = enabledLogs;
     doc["ip"] = ip.toString();
-    doc["port"] = port;
+    doc["tcpPort"] = tcpPort;
+    doc["udpPort"] = udpPort;
 
     File f = SPIFFS.open("/logger_config.json", "w");
     serializeJson(doc, f);
     f.close();
-}
-
-void IotLogger::begin(unsigned int level, unsigned int enabledLogs) {
-    loggerLevel = level;
-    this->enabledLogs = enabledLogs;
-    ip = IPADDR_NONE;
-    port = 54321;
-
-    if (enabledLogs & LOG_UART) {
-        Serial.println();
-    }
 }
 
 void IotLogger::setIP(IPAddress ip) {
@@ -61,11 +53,15 @@ void IotLogger::setIP(IPAddress ip) {
     this->ip = ip;
 }
 
-void IotLogger::setPort(uint16_t port) {
+void IotLogger::setTcpPort(uint16_t port) {
     if (tcpClient.connected()) {
         tcpClient.stop();
     }
-    this->port = port;
+    tcpPort = port;
+}
+
+void IotLogger::setUdpPort(uint16_t port) {
+    udpPort = port;
 }
 
 void IotLogger::enableLog(unsigned int log) {
@@ -200,15 +196,19 @@ void IotLogger::write(const char *s) {
 
     if (enabledLogs & LOG_TCP && ip != IPADDR_NONE) {
         if (!tcpClient.connected()) {
-            tcpClient.connect(ip, port);
+            tcpClient.connect(ip, tcpPort);
         }
 
         if (tcpClient.connected()) {
             tcpClient.print(s);
             yield();
-        } else if (enabledLogs & LOG_UART) {
-            Serial.println("Logger failed to connect");
         }
+    }
+
+    if (enabledLogs & LOG_UDP && ip != IPADDR_NONE) {
+        udpClient.beginPacket(ip, udpPort);
+        udpClient.print(s);
+        udpClient.endPacket();
     }
 }
 

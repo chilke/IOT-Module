@@ -191,7 +191,6 @@ void IotLogger::logf(const char *levelName, const char *f, va_list args) {
 void IotLogger::write(const char *s) {
     if (enabledLogs & LOG_UART) {
         Serial.print(s);
-        yield();
     }
 
     if (enabledLogs & LOG_TCP && ip != IPADDR_NONE) {
@@ -201,15 +200,19 @@ void IotLogger::write(const char *s) {
 
         if (tcpClient.connected()) {
             tcpClient.print(s);
-            yield();
         }
     }
 
     if (enabledLogs & LOG_UDP && ip != IPADDR_NONE) {
-        udpClient.beginPacket(ip, udpPort);
+        if (!udpClient.beginPacket(ip, udpPort)) {
+            Serial.println("beginPacket failure");
+        }
         udpClient.print(s);
-        udpClient.endPacket();
+        if (!udpClient.endPacket()) {
+            Serial.println("endPacket failure");
+        }
     }
+    yield();
 }
 
 int IotLogger::getLogHeader(char *s, int size, const char *levelName) {

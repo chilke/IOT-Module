@@ -9,7 +9,6 @@
 
 bool safeMode = false;
 bool apMode = false;
-bool otaRunning = false;
 
 void setup() {
     pinMode(ICSP_CLK_PIN, INPUT);

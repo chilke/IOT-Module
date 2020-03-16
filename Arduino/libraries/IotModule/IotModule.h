@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <eboot_command.h>
 
+#include <IotDevice.h>
 #include <IotLogger.h>
 #include <WifiConnectionManager.h>
 #include <IotWebServer.h>

@@ -88,6 +88,7 @@ void setup() {
     } else {
         WCM.begin(apMode);
         WebServer.begin();
+        Device.init();
         Mqtt.begin();
         Time.begin();
     }

@@ -3,6 +3,10 @@
 #include <IotLogger.h>
 #include <IotDevice.h>
 
+void IotDevice::init() {
+    clientID = "CSH-12345678";
+}
+
 void IotDevice::fromJson(JsonObject &obj) {
     clientID = obj["ClientID"].as<String>();
     String typeStr = obj["Type"];

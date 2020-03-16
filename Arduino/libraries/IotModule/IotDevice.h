@@ -19,6 +19,7 @@ public:
     String location;
     String name;
 
+    void init();
     void fromJson(JsonObject &obj);
     void toJson(JsonObject &obj);
     void debug();

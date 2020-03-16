@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
-#include <MQTT.h>
+#include <PubSubClient.h>
 #include <WiFiClientSecure.h>
 
 #define MQTT_CONNECT_RETRY 5000
@@ -16,8 +16,7 @@
 
 class IotMqtt {
 public:
-    uint8_t publishMessage(String message);
-    uint8_t getMessage(String &message);
+    uint8_t publishMessage(const char *message);
     void begin();
     void handle();
 private:
@@ -25,9 +24,7 @@ private:
 
     String hostname;
     int port;
-    String pubTopic;
-    String subTopic;
-    String clientId;
+    char topicBuf[20];
     BearSSL::X509List cert;
     BearSSL::X509List client_crt;
     BearSSL::PrivateKey key;
@@ -38,7 +35,7 @@ private:
     uint32_t heartbeatTimer;
     uint32_t lastConnectAttempt;
 
-    MQTTClient client;
+    PubSubClient client;
 };
 
 extern IotMqtt Mqtt;

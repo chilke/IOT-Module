@@ -15,7 +15,7 @@ void handleReadDeviceId();
 void handleReadMemory();
 void handleSendCommand();
 void handlePublish();
-void handleDeviceInfo();
+void handleClientID();
 void handleNotFound();
 
 #endif

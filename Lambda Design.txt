@@ -1,9 +1,13 @@
 DynamoDB
     ClientID
     DeviceType
-    DeviceInfo
-        Location
+    Location
+    Channels
+        ID
         Name
+        Max
+        Min
+        Switch
 
 IotDevice MQTT Handler Function, called only after time is synced and wifi connected
     If not connected and time to retry

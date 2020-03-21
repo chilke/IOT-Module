@@ -10,10 +10,14 @@ void todSet() {
     Time.timeSet();
 }
 
-void IotTime::begin() {
-    set = false;
+IotTime::IotTime() {
     settimeofday_cb(todSet);
-    configTime(TZ_America_Chicago, NTP_HOST_0, NTP_HOST_1, NTP_HOST_2);
+    setTz("GMT0");
+    set = false;
+}
+
+void IotTime::setTz(String tz) {
+    configTime(tz.c_str(), NTP_HOST_0, NTP_HOST_1, NTP_HOST_2);
 }
 
 void IotTime::timeSet() {

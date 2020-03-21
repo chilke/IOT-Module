@@ -8,19 +8,15 @@
 
 #define MQTT_CONNECT_RETRY 5000
 #define MQTT_RESPONSE_TIMEOUT 10000
-#define MQTT_HEARTBEAT_TIMEOUT 3600000
-
-#define MQTT_SUCCESS 0
-#define MQTT_FAILURE 1
-#define MQTT_NOT_CONNECTED 2
 
 class IotMqtt {
 public:
-    uint8_t publishMessage(const char *message);
-    void begin();
+    bool publishMessage(const char *message);
+    void init();
     void handle();
 private:
     void connect(uint32_t m);
+    bool sendDeviceInfo();
 
     String hostname;
     int port;
@@ -30,9 +26,9 @@ private:
     BearSSL::PrivateKey key;
     WiFiClientSecure net;
 
-    bool sendResponse;
+    bool loaded;
     uint32_t responseTimer;
-    uint32_t heartbeatTimer;
+    bool sendResponse;
     uint32_t lastConnectAttempt;
 
     PubSubClient client;

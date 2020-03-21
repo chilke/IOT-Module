@@ -31,7 +31,7 @@ IotWebServer::IotWebServer(int port)
     on("/read", handleReadMemory);
     on("/send_command", handleSendCommand);
     on("/publish", handlePublish);
-    on("/device_info", handleDeviceInfo);
+    on("/client_id", handleClientID);
 
     onNotFound(handleNotFound);
 
@@ -546,52 +546,24 @@ void handlePublish() {
     Logger.debug("handlePublish()");
     WebServer.debug();
 
-    uint8_t ret = Mqtt.publishMessage("{\"Message\":\"Test Message\"}");
+    bool ret = Mqtt.publishMessage("{\"Message\":\"Test Message\"}");
 
     WebServer.send(200, textContent, String(ret));
 }
 
-void handleDeviceInfo() {
-    Logger.debug("handleDeviceInfo()");
+void handleClientID() {
+    Logger.debug("handleClientID()");
     WebServer.debug();
 
-    JsonObject obj;
-    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
-    String buffer = "";
-
-    Logger.debug("At start");
-    Device.debug();
-
-    if (WebServer.method() == HTTP_POST) {
-        Logger.debug("In post handling");
-        DeserializationError err = deserializeJson(doc, WebServer.arg("plain"));
-
-        if (!err) {
-            Logger.debug("No error");
-            obj = doc.as<JsonObject>();
-            Device.fromJson(obj);
-            Logger.debug("After update");
-            Device.debug();
+    if (WebServer.hasArg("id")) {
+        if (Device.setClientID(WebServer.arg("id"))) {
+            sendDone();
         } else {
-            Logger.debug("Error");
             sendNotAllowed();
-            return;
         }
-
-        doc.clear();
-        Logger.debug("After clear");
-        Device.debug();
     } else {
-        Logger.debug("Not Post");
+        sendNotAllowed();
     }
-
-    obj = doc.to<JsonObject>();
-    Device.toJson(obj);
-    buffer.reserve(JSON_BUFFER_SIZE);
-
-    serializeJson(obj, buffer);
-
-    WebServer.send(200, jsonContent, buffer);
 }
 
 void handleNotFound() {

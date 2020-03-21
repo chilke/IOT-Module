@@ -10,7 +10,8 @@
 
 class IotTime {
 public:
-    void begin();
+    IotTime();
+    void setTz(String tz);
     int curTimeToBuffer(char *buf, int size);
     bool isSet();
     void timeSet();

@@ -37,6 +37,7 @@ bool IotDevice::setClientID(String cid) {
     }
 
     clientID = cid;
+    loaded = true;
     return true;
 }
 

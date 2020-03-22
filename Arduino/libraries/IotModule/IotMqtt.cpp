@@ -29,13 +29,68 @@ bool IotMqtt::publishMessage(const char *message) {
     return false;
 }
 
-bool IotMqtt::sendDeviceInfo() {
-    String message;
-    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
-    JsonObject obj = doc.to<JsonObject>();
-    Device.toJson(obj);
-    serializeJson(obj, message);
-    return publishMessage(message.c_str());
+bool IotMqtt::loadCerts() {
+    if (!SPIFFS.exists(MQTT_CA_CERT_FILE)) {
+        Logger.error("cacert file doesn't exist");
+        return false;
+    }
+
+    if (!SPIFFS.exists(MQTT_CLIENT_CERT_FILE)) {
+        Logger.error("client cert file doesn't exist");
+        return false;
+    }
+
+    if (!SPIFFS.exists(MQTT_CLIENT_KEY_FILE)) {
+        Logger.error("client key file doesn't exist");
+        return false;
+    }
+
+    bool success = true;
+    File caFile = SPIFFS.open(MQTT_CA_CERT_FILE, "r");
+    File crtFile = SPIFFS.open(MQTT_CLIENT_CERT_FILE, "r");
+    File keyFile = SPIFFS.open(MQTT_CLIENT_KEY_FILE, "r");
+
+    size_t maxSize = caFile.size();
+
+    if (crtFile.size() > maxSize) {
+        maxSize = crtFile.size();
+    }
+
+    if (keyFile.size() > maxSize) {
+        maxSize = keyFile.size();
+    }
+
+    uint8_t *buffer = new uint8_t[maxSize];
+
+    size_t len = caFile.read(buffer, maxSize);
+    if (!cert.append(buffer, len)) {
+        Logger.error("Failed to load cacert");
+        success = false;
+    } else {
+        len = crtFile.read(buffer, maxSize);
+        if (!client_crt.append(buffer, len)) {
+            Logger.error("Failed to load client cert");
+            success = false;
+        } else {
+            len = keyFile.read(buffer, maxSize);
+            if (!key.parse(buffer, len)) {
+                Logger.error("Failed to load client key");
+                success = false;
+            }
+        }
+    }
+
+    /*
+    cert.append(cacert);
+    client_crt.append(client_cert);
+    key.parse(privkey);*/
+
+    delete[] buffer;
+    caFile.close();
+    crtFile.close();
+    keyFile.close();
+
+    return success;
 }
 
 void IotMqtt::init() {
@@ -43,9 +98,10 @@ void IotMqtt::init() {
     if (Device.init()) {
         lastConnectAttempt = millis() - MQTT_CONNECT_RETRY;
 
-        cert.append(cacert);
-        client_crt.append(client_cert);
-        key.parse(privkey);
+        if (!loadCerts()) {
+            return;
+        }
+        
         hostname = "a1r32q860r2zlh-ats.iot.us-east-2.amazonaws.com";
         port = 8883;
 
@@ -57,8 +113,6 @@ void IotMqtt::init() {
         client.setCallback(messageReceived);
 
         loaded = true;
-    } else {
-        Logger.debug("Device init failed, skipping MQTT init");
     }
 }
 

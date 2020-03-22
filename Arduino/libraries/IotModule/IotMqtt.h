@@ -9,14 +9,18 @@
 #define MQTT_CONNECT_RETRY 5000
 #define MQTT_RESPONSE_TIMEOUT 10000
 
+#define MQTT_CA_CERT_FILE "/ca.crt"
+#define MQTT_CLIENT_CERT_FILE "/client.crt"
+#define MQTT_CLIENT_KEY_FILE "/client.key"
+
 class IotMqtt {
 public:
     bool publishMessage(const char *message);
     void init();
     void handle();
 private:
+    bool loadCerts();
     void connect(uint32_t m);
-    bool sendDeviceInfo();
 
     String hostname;
     int port;

@@ -32,6 +32,8 @@ IotWebServer::IotWebServer(int port)
     on("/send_command", handleSendCommand);
     on("/publish", handlePublish);
     on("/client_id", handleClientID);
+    on("/backup_certs", handleBackupCerts);
+    on("/restore_certs", handleRestoreCerts);
 
     onNotFound(handleNotFound);
 
@@ -561,6 +563,28 @@ void handleClientID() {
         } else {
             sendNotAllowed();
         }
+    } else {
+        sendNotAllowed();
+    }
+}
+
+void handleBackupCerts() {
+    Logger.debug("handleBackupCerts()");
+    WebServer.debug();
+
+    if (Mqtt.backupCerts()) {
+        sendDone();
+    } else {
+        sendNotAllowed();
+    }
+}
+
+void handleRestoreCerts() {
+    Logger.debug("handleRestoreCerts()");
+    WebServer.debug();
+
+    if (Mqtt.restoreCerts()) {
+        sendDone();
     } else {
         sendNotAllowed();
     }

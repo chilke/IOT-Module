@@ -16,6 +16,8 @@ void handleReadMemory();
 void handleSendCommand();
 void handlePublish();
 void handleClientID();
+void handleBackupCerts();
+void handleRestoreCerts();
 void handleNotFound();
 
 #endif

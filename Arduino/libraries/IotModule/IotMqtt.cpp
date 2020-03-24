@@ -10,11 +10,12 @@ void messageReceived(char* topic, byte* payload, unsigned int length) {
     DynamicJsonDocument doc(JSON_BUFFER_SIZE);
     DeserializationError err = deserializeJson(doc, (char *)payload, length);
 
-    if (!err) {
-
-    } else {
+    if (err) {
         Logger.error("MQTT json error");
+        return;
     }
+
+
 }
 
 bool IotMqtt::publishMessage(const char *message) {
@@ -27,116 +28,6 @@ bool IotMqtt::publishMessage(const char *message) {
     }
 
     return false;
-}
-
-bool IotMqtt::backupCerts() {
-    if (!SPIFFS.exists(MQTT_CA_CERT_FILE)) {
-        Logger.errorf("Backup certs %s does not exist", MQTT_CA_CERT_FILE);
-        return false;
-    }
-
-    if (!SPIFFS.exists(MQTT_CLIENT_CERT_FILE)) {
-        Logger.errorf("Backup certs %s does not exist", MQTT_CLIENT_CERT_FILE);
-        return false;
-    }
-
-    if (!SPIFFS.exists(MQTT_CLIENT_KEY_FILE)) {
-        Logger.errorf("Backup certs %s does not exist", MQTT_CLIENT_KEY_FILE);
-        return false;
-    }
-
-    if (SPIFFS.exists(MQTT_CA_CERT_BAK_FILE)) {
-        if (!SPIFFS.remove(MQTT_CA_CERT_BAK_FILE)) {
-            Logger.errorf("Backup certs failed to remove %s", MQTT_CA_CERT_BAK_FILE);
-            return false;
-        }
-    }
-
-    if (SPIFFS.exists(MQTT_CLIENT_CERT_BAK_FILE)) {
-        if (!SPIFFS.remove(MQTT_CLIENT_CERT_BAK_FILE)) {
-            Logger.errorf("Backup certs failed to remove %s", MQTT_CLIENT_CERT_BAK_FILE);
-            return false;
-        }
-    }
-
-    if (SPIFFS.exists(MQTT_CLIENT_KEY_BAK_FILE)) {
-        if (!SPIFFS.remove(MQTT_CLIENT_KEY_BAK_FILE)) {
-            Logger.errorf("Backup certs failed to remove %s", MQTT_CLIENT_KEY_BAK_FILE);
-            return false;
-        }
-    }
-
-    if (!SPIFFS.rename(MQTT_CA_CERT_FILE, MQTT_CA_CERT_BAK_FILE)) {
-        Logger.errorf("Backup certs failed to rename %s", MQTT_CA_CERT_FILE);
-        return false;
-    }
-
-    if (!SPIFFS.rename(MQTT_CLIENT_CERT_FILE, MQTT_CLIENT_CERT_BAK_FILE)) {
-        Logger.errorf("Backup certs failed to rename %s", MQTT_CLIENT_CERT_FILE);
-        return false;
-    }
-
-    if (!SPIFFS.rename(MQTT_CLIENT_KEY_FILE, MQTT_CLIENT_KEY_BAK_FILE)) {
-        Logger.errorf("Backup certs failed to rename %s", MQTT_CLIENT_KEY_FILE);
-        return false;
-    }
-
-    return true;
-}
-
-bool IotMqtt::restoreCerts() {
-    if (!SPIFFS.exists(MQTT_CA_CERT_BAK_FILE)) {
-        Logger.errorf("Restore certs %s does not exist", MQTT_CA_CERT_BAK_FILE);
-        return false;
-    }
-
-    if (!SPIFFS.exists(MQTT_CLIENT_CERT_BAK_FILE)) {
-        Logger.errorf("Restore certs %s does not exist", MQTT_CLIENT_CERT_BAK_FILE);
-        return false;
-    }
-
-    if (!SPIFFS.exists(MQTT_CLIENT_KEY_BAK_FILE)) {
-        Logger.errorf("Restore certs %s does not exist", MQTT_CLIENT_KEY_BAK_FILE);
-        return false;
-    }
-
-    if (SPIFFS.exists(MQTT_CA_CERT_FILE)) {
-        if (!SPIFFS.remove(MQTT_CA_CERT_FILE)) {
-            Logger.errorf("Restore certs failed to remove %s", MQTT_CA_CERT_FILE);
-            return false;
-        }
-    }
-
-    if (SPIFFS.exists(MQTT_CLIENT_CERT_FILE)) {
-        if (!SPIFFS.remove(MQTT_CLIENT_CERT_FILE)) {
-            Logger.errorf("Restore certs failed to remove %s", MQTT_CLIENT_CERT_FILE);
-            return false;
-        }
-    }
-
-    if (SPIFFS.exists(MQTT_CLIENT_KEY_FILE)) {
-        if (!SPIFFS.remove(MQTT_CLIENT_KEY_FILE)) {
-            Logger.errorf("Restore certs failed to remove %s", MQTT_CLIENT_KEY_FILE);
-            return false;
-        }
-    }
-
-    if (!SPIFFS.rename(MQTT_CA_CERT_BAK_FILE, MQTT_CA_CERT_FILE)) {
-        Logger.errorf("Restore certs failed to rename %s", MQTT_CA_CERT_FILE);
-        return false;
-    }
-
-    if (!SPIFFS.rename(MQTT_CLIENT_CERT_BAK_FILE, MQTT_CLIENT_CERT_FILE)) {
-        Logger.errorf("Restore certs failed to rename %s", MQTT_CLIENT_CERT_FILE);
-        return false;
-    }
-
-    if (!SPIFFS.rename(MQTT_CLIENT_KEY_BAK_FILE, MQTT_CLIENT_KEY_FILE)) {
-        Logger.errorf("Restore certs failed to rename %s", MQTT_CLIENT_KEY_FILE);
-        return false;
-    }
-
-    return true;
 }
 
 bool IotMqtt::loadCerts() {
@@ -269,6 +160,116 @@ void IotMqtt::handle() {
     } else {
         init();
     }
+}
+
+bool IotMqtt::backupCerts() {
+    if (!SPIFFS.exists(MQTT_CA_CERT_FILE)) {
+        Logger.errorf("Backup certs %s does not exist", MQTT_CA_CERT_FILE);
+        return false;
+    }
+
+    if (!SPIFFS.exists(MQTT_CLIENT_CERT_FILE)) {
+        Logger.errorf("Backup certs %s does not exist", MQTT_CLIENT_CERT_FILE);
+        return false;
+    }
+
+    if (!SPIFFS.exists(MQTT_CLIENT_KEY_FILE)) {
+        Logger.errorf("Backup certs %s does not exist", MQTT_CLIENT_KEY_FILE);
+        return false;
+    }
+
+    if (SPIFFS.exists(MQTT_CA_CERT_BAK_FILE)) {
+        if (!SPIFFS.remove(MQTT_CA_CERT_BAK_FILE)) {
+            Logger.errorf("Backup certs failed to remove %s", MQTT_CA_CERT_BAK_FILE);
+            return false;
+        }
+    }
+
+    if (SPIFFS.exists(MQTT_CLIENT_CERT_BAK_FILE)) {
+        if (!SPIFFS.remove(MQTT_CLIENT_CERT_BAK_FILE)) {
+            Logger.errorf("Backup certs failed to remove %s", MQTT_CLIENT_CERT_BAK_FILE);
+            return false;
+        }
+    }
+
+    if (SPIFFS.exists(MQTT_CLIENT_KEY_BAK_FILE)) {
+        if (!SPIFFS.remove(MQTT_CLIENT_KEY_BAK_FILE)) {
+            Logger.errorf("Backup certs failed to remove %s", MQTT_CLIENT_KEY_BAK_FILE);
+            return false;
+        }
+    }
+
+    if (!SPIFFS.rename(MQTT_CA_CERT_FILE, MQTT_CA_CERT_BAK_FILE)) {
+        Logger.errorf("Backup certs failed to rename %s", MQTT_CA_CERT_FILE);
+        return false;
+    }
+
+    if (!SPIFFS.rename(MQTT_CLIENT_CERT_FILE, MQTT_CLIENT_CERT_BAK_FILE)) {
+        Logger.errorf("Backup certs failed to rename %s", MQTT_CLIENT_CERT_FILE);
+        return false;
+    }
+
+    if (!SPIFFS.rename(MQTT_CLIENT_KEY_FILE, MQTT_CLIENT_KEY_BAK_FILE)) {
+        Logger.errorf("Backup certs failed to rename %s", MQTT_CLIENT_KEY_FILE);
+        return false;
+    }
+
+    return true;
+}
+
+bool IotMqtt::restoreCerts() {
+    if (!SPIFFS.exists(MQTT_CA_CERT_BAK_FILE)) {
+        Logger.errorf("Restore certs %s does not exist", MQTT_CA_CERT_BAK_FILE);
+        return false;
+    }
+
+    if (!SPIFFS.exists(MQTT_CLIENT_CERT_BAK_FILE)) {
+        Logger.errorf("Restore certs %s does not exist", MQTT_CLIENT_CERT_BAK_FILE);
+        return false;
+    }
+
+    if (!SPIFFS.exists(MQTT_CLIENT_KEY_BAK_FILE)) {
+        Logger.errorf("Restore certs %s does not exist", MQTT_CLIENT_KEY_BAK_FILE);
+        return false;
+    }
+
+    if (SPIFFS.exists(MQTT_CA_CERT_FILE)) {
+        if (!SPIFFS.remove(MQTT_CA_CERT_FILE)) {
+            Logger.errorf("Restore certs failed to remove %s", MQTT_CA_CERT_FILE);
+            return false;
+        }
+    }
+
+    if (SPIFFS.exists(MQTT_CLIENT_CERT_FILE)) {
+        if (!SPIFFS.remove(MQTT_CLIENT_CERT_FILE)) {
+            Logger.errorf("Restore certs failed to remove %s", MQTT_CLIENT_CERT_FILE);
+            return false;
+        }
+    }
+
+    if (SPIFFS.exists(MQTT_CLIENT_KEY_FILE)) {
+        if (!SPIFFS.remove(MQTT_CLIENT_KEY_FILE)) {
+            Logger.errorf("Restore certs failed to remove %s", MQTT_CLIENT_KEY_FILE);
+            return false;
+        }
+    }
+
+    if (!SPIFFS.rename(MQTT_CA_CERT_BAK_FILE, MQTT_CA_CERT_FILE)) {
+        Logger.errorf("Restore certs failed to rename %s", MQTT_CA_CERT_FILE);
+        return false;
+    }
+
+    if (!SPIFFS.rename(MQTT_CLIENT_CERT_BAK_FILE, MQTT_CLIENT_CERT_FILE)) {
+        Logger.errorf("Restore certs failed to rename %s", MQTT_CLIENT_CERT_FILE);
+        return false;
+    }
+
+    if (!SPIFFS.rename(MQTT_CLIENT_KEY_BAK_FILE, MQTT_CLIENT_KEY_FILE)) {
+        Logger.errorf("Restore certs failed to rename %s", MQTT_CLIENT_KEY_FILE);
+        return false;
+    }
+
+    return true;
 }
 
 IotMqtt Mqtt;

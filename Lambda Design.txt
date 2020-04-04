@@ -1,18 +1,22 @@
 Define full point to point network
 
 App->Device
-Device->AWS
+App->Devices
 App->AWS
 Device->App
+Device->Apps
+Device->AWS
+AWS->App
+AWS->Device
 
-
-All Devices listen on all_devices
-All Apps listen on all_apps
-Each entity listens on {client_id}
+All Devices listen on to/things
+All Apps listen on to/apps
+Each entity listens on to/{client_id}
 AWS Lambda Rule called by apps and devices
+    Lambda executed on to/aws (just include lambda=true to save on rules)
+AWS Lambda Rule called on device disconnects
 
-App->AllDevices
-Query
+To cc AWS on interdevice/app messages, add lambda=true to payload
 
 App->Device
 UpdateDeviceInfo
@@ -20,21 +24,46 @@ UpdateDeviceState
 AddSchedule
 DeleteSchedule
 
+App->Devices
+Query
+
 App->AWS
 GetDevices
+CreateDevice
+CreateApp (Only called through api gateway)
+DeleteDevice
+DeleteApp
+
+Device->App
+Query (Only in response)
+UpdateDeviceInfo (Only in error response)
+UpdateDeviceState (Only in error response)
+AddSchedule (Only in error response)
+DeleteSchedule (Only in error response)
+
+Device->Apps
+Connected
+UpdateDeviceState
+UpdateDeviceInfo (Only in response)
+AddSchedule (Only in response)
+DeleteSchedule (Only in response)
 
 Device->AWS
 UpdateDeviceInfo
+Heartbeat
 
-Device->AllApps
-Connected
-UpdateDeviceState
+AWS->App
+GetDevices (Only in response)
+CreateDevice (Only in response)
+CreateApp (Only in response)
+DeleteDevice (Only in response)
+DeleteApp (Only in response)
 
 
 AWS Lambda Design
-On disconnect -> Update last seen date/time
+On connect/heartbeat/disconnect -> Update last seen date/time
 On update -> Update full device info
 On get -> Send all device infos
 
 DynamoDB - Store Minimal JSON instead of expanding
-    cid is primary key
+    ci is primary key

@@ -29,10 +29,12 @@ public:
 
     IotDimmerChannel channels[DIMMER_CH_CNT];
 
+    bool needsSync;
+
     IotDevice();
     bool init();
     void persist();
-    bool fromJson(JsonObject &obj);
+    void fromJson(JsonObject &obj);
     void toJson(JsonObject &obj);
     bool setClientID(String cid);
 

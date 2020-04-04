@@ -30,10 +30,10 @@ IotWebServer::IotWebServer(int port)
     on("/read_device_id", handleReadDeviceId);
     on("/read", handleReadMemory);
     on("/send_command", handleSendCommand);
-    on("/publish", handlePublish);
     on("/client_id", handleClientID);
     on("/backup_certs", handleBackupCerts);
     on("/restore_certs", handleRestoreCerts);
+    on("/device_info", handleDeviceInfo);
 
     onNotFound(handleNotFound);
 
@@ -544,21 +544,13 @@ void handleSendCommand() {
     }
 }
 
-void handlePublish() {
-    Logger.debug("handlePublish()");
-    WebServer.debug();
-
-    bool ret = Mqtt.publishMessage("{\"Message\":\"Test Message\"}");
-
-    WebServer.send(200, textContent, String(ret));
-}
-
 void handleClientID() {
     Logger.debug("handleClientID()");
     WebServer.debug();
 
     if (WebServer.hasArg("id")) {
         if (Device.setClientID(WebServer.arg("id"))) {
+            Device.persist();
             sendDone();
         } else {
             sendNotAllowed();
@@ -588,6 +580,33 @@ void handleRestoreCerts() {
     } else {
         sendNotAllowed();
     }
+}
+
+void handleDeviceInfo() {
+    Logger.debug("handleDeviceInfo()");
+    WebServer.debug();
+
+    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+    JsonObject obj;
+    String buffer;
+
+    if (WebServer.method() == HTTP_POST) {
+        DeserializationError err = deserializeJson(doc, WebServer.arg("plain"));
+
+        if (!err) {
+            obj = doc.as<JsonObject>();
+            Device.fromJson(obj);
+            Device.persist();
+            Device.needsSync = true;
+        }
+
+        doc.clear();
+    }
+    obj = doc.to<JsonObject>();
+    Device.toJson(obj);
+    serializeJson(obj, buffer);
+
+    WebServer.send(200, jsonContent, buffer);
 }
 
 void handleNotFound() {

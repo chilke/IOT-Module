@@ -15,3 +15,7 @@ void IotDimmerChannel::toJson(JsonObject &obj) {
     obj[DIM_CH_ID_ATTR] = id;
     obj[DIM_CH_SWITCH_ATTR] = isSwitch;
 }
+
+int IotDimmerChannel::idFromJson(JsonObject &obj) {
+    return obj[DIM_CH_ID_ATTR];
+}

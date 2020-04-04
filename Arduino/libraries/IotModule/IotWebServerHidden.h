@@ -14,10 +14,10 @@ void handleCpu();
 void handleReadDeviceId();
 void handleReadMemory();
 void handleSendCommand();
-void handlePublish();
 void handleClientID();
 void handleBackupCerts();
 void handleRestoreCerts();
+void handleDeviceInfo();
 void handleNotFound();
 
 #endif

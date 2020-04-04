@@ -5,7 +5,7 @@
 #include <WiFiClient.h>
 #include <WiFiUdp.h>
 
-#define LOGGER_BUFLEN 101
+#define LOGGER_BUFLEN 256
 
 #define LOG_LEVEL_NONE 0
 #define LOG_LEVEL_ERROR 1

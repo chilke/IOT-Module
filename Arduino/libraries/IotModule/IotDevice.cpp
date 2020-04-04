@@ -7,6 +7,7 @@
 
 IotDevice::IotDevice() {
     loaded = false;
+    needsSync = false;
 }
 
 bool IotDevice::init() {
@@ -22,7 +23,8 @@ bool IotDevice::init() {
         if (!err && doc.containsKey(DEVICE_CLIENT_ATTR)) {
             JsonObject obj = doc.as<JsonObject>();
             clientID = doc[DEVICE_CLIENT_ATTR].as<String>();
-            loaded = fromJson(obj);
+            fromJson(obj);
+            loaded = true;
         }
 
         f.close();
@@ -50,19 +52,13 @@ void IotDevice::persist() {
     f.close();
 }
 
-bool IotDevice::fromJson(JsonObject &obj) {
+void IotDevice::fromJson(JsonObject &obj) {
     String tmpStr = obj[DEVICE_TYPE_ATTR].as<String>();
     if (tmpStr == DIMMER_TYPE_NAME) {
         type = DeviceTypeDimmer;
         JsonArray chs = obj[DEVICE_CH_ATTR].as<JsonArray>();
-        int i = 0;
         for (JsonObject ch : chs) {
-            channels[i].fromJson(ch);
-            if (channels[i].id != i) {
-                Logger.errorf("Channel id mismatch, i:%i, id:%i", i, channels[i].id);
-                return false;
-            }
-            i++;
+            channels[IotDimmerChannel::idFromJson(ch)].fromJson(ch);
         }
     } else {
         type = DeviceTypeNone;
@@ -74,7 +70,7 @@ bool IotDevice::fromJson(JsonObject &obj) {
         Time.setTz(timezone);
     }
 
-    return true;
+    needsSync = obj[DEVICE_SYNC_ATTR] | false;
 }
 
 void IotDevice::toJson(JsonObject &obj) {
@@ -92,6 +88,7 @@ void IotDevice::toJson(JsonObject &obj) {
     obj[DEVICE_TYPE_ATTR] = typeStr;
     obj[DEVICE_LOC_ATTR] = location;
     obj[DEVICE_TZ_ATTR] = timezone;
+    obj[DEVICE_SYNC_ATTR] = needsSync;
 }
 
 IotDevice Device;

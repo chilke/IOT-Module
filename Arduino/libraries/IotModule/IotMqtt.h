@@ -19,7 +19,6 @@
 
 class IotMqtt {
 public:
-    bool publishMessage(const char *message);
     void init();
     void handle();
 
@@ -28,6 +27,7 @@ public:
 private:
     bool loadCerts();
     void connect(uint32_t m);
+    void sendDeviceInfo();
 
     String hostname;
     int port;
@@ -38,8 +38,6 @@ private:
     WiFiClientSecure net;
 
     bool loaded;
-    uint32_t responseTimer;
-    bool sendResponse;
     uint32_t lastConnectAttempt;
 
     PubSubClient client;

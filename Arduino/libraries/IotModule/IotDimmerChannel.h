@@ -20,6 +20,8 @@ public:
 
     void fromJson(JsonObject &obj);
     void toJson(JsonObject &obj);
+
+    static int idFromJson(JsonObject &obj);
 };
 
 #endif

@@ -4,7 +4,6 @@
 #include <ArduinoJson.h>
 #include <IotDimmerChannel.h>
 
-#define DEVICE_SYNC_ATTR "ns"
 #define DEVICE_CLIENT_ATTR "ci"
 #define DEVICE_TYPE_ATTR "tp"
 #define DEVICE_LOC_ATTR "lo"
@@ -14,6 +13,9 @@
 #define DIMMER_CH_CNT 2
 
 #define DIMMER_TYPE_NAME "Dim"
+
+
+#define STATE_UPDATE_TIME 1000
 
 typedef enum device_type_t {
     DeviceTypeDimmer,
@@ -29,7 +31,11 @@ public:
 
     IotDimmerChannel channels[DIMMER_CH_CNT];
 
-    bool needsSync;
+    uint32_t stateUpdateTime;
+    bool syncPic;
+
+    bool syncDevice;
+    bool syncState;
 
     IotDevice();
     bool init();
@@ -37,7 +43,8 @@ public:
     void fromJson(JsonObject &obj);
     void toJson(JsonObject &obj);
     bool setClientID(String cid);
-
+    void updateState(JsonObject &obj);
+    void handle();
 private:
     bool loaded;
 };

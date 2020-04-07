@@ -3,48 +3,32 @@
 #include <IotModule.h>
 #include <IotUartComm.h>
 
-void IotUartComm::begin() {
+IotUartComm::IotUartComm() {
+    Serial.setTimeout(5);
+}
+
+void IotUartComm::init() {
     Serial.flush();
     Serial.pins(15, 13);
-    delay(1); //Hack to wait for garbled byte after swapping
-    while (Serial.available()) {
-        Serial.read();
-    }
+    delay(1);
 }
 
-void IotUartComm::end() {
-    while (Serial.available()) {
-        Serial.read();
-    }
-    Serial.pins(1, 3);
-}
-
-uint8_t IotUartComm::sendCommand(uint8_t command) {
-    uint8_t ret;
-    Logger.debug("Entering sendCommand");
-    begin();
-    Serial.printf("S%02X0000", command);
-    Serial.flush();
-    ret = Serial.readBytes(buffer, 1);
-    if (ret == 1) {
-        if (buffer[0] == UART_COMM_ACK) {
-            ret = UART_COMM_SUCCESS;
-        } else if (buffer[0] == UART_COMM_NACK) {
-            ret = UART_COMM_NACK_ERROR;
-        } else {
-            ret = UART_COMM_DATA_ERROR;
-        }
-    } else {
-        ret = UART_COMM_TIMEOUT;
+uint8_t IotUartComm::sendDimmerValue(uint8_t channel, uint16_t value) {
+    uint8_t ret = sendCommand(channel, value);
+    if (ret != UART_COMM_SUCCESS) {
+        Logger.debug("sendCommand Failed, trying again");
+        ret = sendCommand(channel, value);
     }
 
-    end();
     return ret;
 }
 
-uint8_t IotUartComm::sendCommandWithValue(uint8_t command, uint16_t value) {
+uint8_t IotUartComm::sendCommand(uint8_t command, uint16_t value) {
     uint8_t ret;
-    begin();
+    
+    while (Serial.available()) {
+        Serial.read();
+    }
 
     Serial.printf("S%02X%04X", command, value);
     Serial.flush();
@@ -70,7 +54,6 @@ uint8_t IotUartComm::sendCommandWithValue(uint8_t command, uint16_t value) {
         ret = UART_COMM_DATA_ERROR;
     }
 
-    end();
     return ret;
 }
 

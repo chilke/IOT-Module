@@ -9,15 +9,16 @@
 #define UART_COMM_NACK_ERROR 2
 #define UART_COMM_DATA_ERROR 3
 
+#define RESPONSE_TIMEOUT 1000
+
 class IotUartComm {
 public:
-    uint8_t sendCommand(uint8_t command);
-    uint8_t sendCommandWithValue(uint8_t command, uint16_t value);
+    IotUartComm();
+    uint8_t sendDimmerValue(uint8_t channel, uint16_t value);
 
+    void init();
 private:
-
-    void begin();
-    void end();
+    uint8_t sendCommand(uint8_t command, uint16_t value);
 
     char buffer[5];
 };

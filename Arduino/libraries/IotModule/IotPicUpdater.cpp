@@ -82,7 +82,9 @@ void IotPicUpdater::getDeviceAndRevisionId(uint16_t *deviceId, uint16_t *revisio
 
 void IotPicUpdater::enterProgramMode() {
     //Should never be a problem, but make sure serial isn't using our PINs
+    Serial.flush();
     Serial.pins(1,3);
+    delay(1);
     digitalWrite(ICSP_MCLR_PIN, 0);
     pinMode(ICSP_CLK_PIN, OUTPUT);
     pinMode(ICSP_DAT_PIN, OUTPUT);
@@ -100,6 +102,11 @@ void IotPicUpdater::exitProgramMode() {
     pinMode(ICSP_CLK_PIN, INPUT);
     pinMode(ICSP_DAT_PIN, INPUT);
     digitalWrite(ICSP_MCLR_PIN, 1);
+
+    //TODO - Hack for now to put serial back into pic comm mode
+    Serial.flush();
+    Serial.pins(15, 13);
+    delay(1);
 }
 
 void IotPicUpdater::bulkErase() {
@@ -153,7 +160,6 @@ int IotPicUpdater::sendNextRow() {
         rowData[rowPos] = curVal;
         rowAddr[rowPos] = curAddr;
         rowPos++;
-        // Logger.debugf("sendNVM %04X %04X", curAddr, curVal);
         sendNVM(curVal);
 
         curAddr++;
@@ -180,22 +186,17 @@ int IotPicUpdater::sendNextRow() {
     }
 
     if (!validating) {
-        // Logger.debugf("Before delay %lu", micros());
         sendByte(PU_CMD_COMMIT);
         delay(6);
-        // Logger.debugf("After delay %lu", micros());
 
         newAddr = curAddr;
 
         for (int i = 0; i < rowPos; i++) {
-            // Logger.debugf("curAddr: %04X, rowAddr: %04X", curAddr, rowAddr[i]);
             if (curAddr != rowAddr[i]) {
-                // Logger.debug("Don't match");
                 curAddr = rowAddr[i];
                 resetPC = 1;
             }
             curVal=readNVM(true);
-            // Logger.debugf("Compare addr: %04X, %04X, %04X", curAddr, curVal, rowData[i]);
             if (curVal != rowData[i]) {
                 return PU_SEND_NVM_FAIL;
             }
@@ -287,10 +288,8 @@ void IotPicUpdater::sendNVM(uint16_t value) {
 
 uint16_t IotPicUpdater::readNVM(bool inc) {
     uint16_t ret = 0;
-    // Logger.debugf("Reading %04X", curAddr);
     //Update PC
     if (resetPC) {
-        // Logger.debug("Reseting PC");
         sendByte(PU_CMD_LOAD_PC);
         delayMicroseconds(1);
         sendValue(curAddr);

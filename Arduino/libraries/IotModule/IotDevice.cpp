@@ -7,7 +7,9 @@
 
 IotDevice::IotDevice() {
     loaded = false;
-    needsSync = false;
+    syncDevice = false;
+    syncState = false;
+    stateUpdateTime = 0;
 }
 
 bool IotDevice::init() {
@@ -31,6 +33,18 @@ bool IotDevice::init() {
     }
 
     return loaded;
+}
+
+void IotDevice::handle() {
+    if (stateUpdateTime != 0) {
+        uint32_t m = millis();
+        if (m - stateUpdateTime > STATE_UPDATE_TIME) {
+            Logger.debug("Persisting device state");
+            syncState = true;
+            stateUpdateTime = 0;
+            persist();
+        }
+    }
 }
 
 bool IotDevice::setClientID(String cid) {
@@ -69,8 +83,6 @@ void IotDevice::fromJson(JsonObject &obj) {
         timezone = tmpStr;
         Time.setTz(timezone);
     }
-
-    needsSync = obj[DEVICE_SYNC_ATTR] | false;
 }
 
 void IotDevice::toJson(JsonObject &obj) {
@@ -88,7 +100,25 @@ void IotDevice::toJson(JsonObject &obj) {
     obj[DEVICE_TYPE_ATTR] = typeStr;
     obj[DEVICE_LOC_ATTR] = location;
     obj[DEVICE_TZ_ATTR] = timezone;
-    obj[DEVICE_SYNC_ATTR] = needsSync;
+}
+
+void IotDevice::updateState(JsonObject &obj) {
+    if (type == DeviceTypeDimmer) {
+        JsonArray chs = obj[DEVICE_CH_ATTR].as<JsonArray>();
+        bool updated = false;
+        for (JsonObject ch : chs) {
+            if (channels[IotDimmerChannel::idFromJson(ch)].updateState(ch)) {
+                updated = true;
+            }
+        }
+
+        if (updated) {
+            stateUpdateTime = millis();
+            if (stateUpdateTime == 0) {
+                stateUpdateTime = 1;
+            }
+        }
+    }
 }
 
 IotDevice Device;

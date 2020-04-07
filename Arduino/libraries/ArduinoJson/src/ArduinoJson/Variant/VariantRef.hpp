@@ -153,7 +153,9 @@ class VariantRef : public VariantRefBase<VariantData>,
   }
 
   // set(bool value)
-  FORCE_INLINE bool set(bool value) const {
+  template <typename T>
+  FORCE_INLINE bool set(
+      T value, typename enable_if<is_same<T, bool>::value>::type * = 0) const {
     return variantSetBoolean(_data, value);
   }
 
@@ -237,6 +239,13 @@ class VariantRef : public VariantRefBase<VariantData>,
   typename enable_if<IsVisitable<TVariant>::value, bool>::type set(
       const TVariant &value) const;
 
+  // set(enum value)
+  template <typename T>
+  FORCE_INLINE bool set(
+      T value, typename enable_if<is_enum<T>::value>::type * = 0) const {
+    return variantSetSignedInteger(_data, static_cast<Integer>(value));
+  }
+
   // Get the variant as the specified type.
   //
   // std::string as<std::string>() const;
@@ -301,6 +310,8 @@ class VariantRef : public VariantRefBase<VariantData>,
 
   FORCE_INLINE VariantRef getElement(size_t) const;
 
+  FORCE_INLINE VariantRef getOrAddElement(size_t) const;
+
   // getMember(const char*) const
   // getMember(const __FlashStringHelper*) const
   template <typename TChar>
@@ -324,7 +335,8 @@ class VariantRef : public VariantRefBase<VariantData>,
   FORCE_INLINE VariantRef getOrAddMember(const TString &) const;
 
   FORCE_INLINE void remove(size_t index) const {
-    if (_data) _data->remove(index);
+    if (_data)
+      _data->remove(index);
   }
   // remove(char*) const
   // remove(const char*) const
@@ -332,14 +344,16 @@ class VariantRef : public VariantRefBase<VariantData>,
   template <typename TChar>
   FORCE_INLINE typename enable_if<IsString<TChar *>::value>::type remove(
       TChar *key) const {
-    if (_data) _data->remove(adaptString(key));
+    if (_data)
+      _data->remove(adaptString(key));
   }
   // remove(const std::string&) const
   // remove(const String&) const
   template <typename TString>
   FORCE_INLINE typename enable_if<IsString<TString>::value>::type remove(
       const TString &key) const {
-    if (_data) _data->remove(adaptString(key));
+    if (_data)
+      _data->remove(adaptString(key));
   }
 
  private:
@@ -379,7 +393,8 @@ class VariantConstRef : public VariantRefBase<const VariantData>,
   // getMember(const String&) const
   template <typename TString>
   FORCE_INLINE VariantConstRef getMember(const TString &key) const {
-    return VariantConstRef(objectGet(variantAsObject(_data), adaptString(key)));
+    return VariantConstRef(
+        objectGetMember(variantAsObject(_data), adaptString(key)));
   }
 
   // getMember(char*) const
@@ -388,7 +403,7 @@ class VariantConstRef : public VariantRefBase<const VariantData>,
   template <typename TChar>
   FORCE_INLINE VariantConstRef getMember(TChar *key) const {
     const CollectionData *obj = variantAsObject(_data);
-    return VariantConstRef(obj ? obj->get(adaptString(key)) : 0);
+    return VariantConstRef(obj ? obj->getMember(adaptString(key)) : 0);
   }
 
   // operator[](const std::string&) const

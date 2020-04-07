@@ -4,6 +4,10 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPUpdateServer.h>
 
+enum UploadStatus {
+    UPLOAD_INIT, UPLOAD_INPROGRESS, UPLOAD_COMPLETE, UPLOAD_ERROR_EXISTS
+};
+
 class IotWebServer : public ESP8266WebServer {
 public:
     IotWebServer(int port);

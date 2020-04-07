@@ -86,8 +86,6 @@ int IotHexFileReader::getNextData(FileReaderData *data) {
     for (int i = 0; i < data->length; i++) {
         sprintf(&buffer[i*2], "%02X", data->data[i]);
     }
-    Logger.debugf("getNextData %04X %02X", data->address, data->length);
-    Logger.debug(buffer);
 
     return HFR_DATA_SUCCESS;
 }

@@ -8,16 +8,17 @@ void handleNetwork();
 void handleDebugInfo();
 void handleLogger();
 void handleReset();
+void handleUploadComplete();
 void handleUpload();
 void handleSendFile();
 void handleCpu();
 void handleReadDeviceId();
 void handleReadMemory();
-void handleSendCommand();
 void handleClientID();
 void handleBackupCerts();
 void handleRestoreCerts();
 void handleDeviceInfo();
+void handleChannels();
 void handleNotFound();
 
 #endif

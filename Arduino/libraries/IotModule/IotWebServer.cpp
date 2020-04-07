@@ -14,6 +14,9 @@ static String successBody = "{\"status\":\"OK\"}";
 static String methodError = "Method not allowed";
 static String notFoundError = "Resource not found";
 
+File uploadFile;
+UploadStatus uploadStatus;
+
 IotWebServer::IotWebServer(int port)
 : ESP8266WebServer(port)
 {
@@ -24,20 +27,21 @@ IotWebServer::IotWebServer(int port)
     on("/debug_info", handleDebugInfo);
     on("/logger", handleLogger);
     on("/reset", handleReset);
-    on("/upload", handleUpload);
+    on("/upload", HTTP_ANY, handleUploadComplete, handleUpload);
     on("/send_file", handleSendFile);
     on("/cpu", handleCpu);
     on("/read_device_id", handleReadDeviceId);
     on("/read", handleReadMemory);
-    on("/send_command", handleSendCommand);
     on("/client_id", handleClientID);
     on("/backup_certs", handleBackupCerts);
     on("/restore_certs", handleRestoreCerts);
     on("/device_info", handleDeviceInfo);
+    on("/channels", handleChannels);
 
     onNotFound(handleNotFound);
 
     httpUpdater.setup(this);
+    uploadStatus = UPLOAD_INIT;
 }
 
 String IotWebServer::methodName() {
@@ -390,44 +394,66 @@ void handleReset() {
     }
 }
 
+void handleUploadComplete() {
+    Logger.debug("handleUploadComplete");
+
+    HTTPMethod m = WebServer.method();
+
+    if (m == HTTP_PUT || m == HTTP_POST) {
+        if (uploadStatus == UPLOAD_ERROR_EXISTS) {
+            WebServer.send(409, textContent, "File already exists");
+        } else if (uploadStatus == UPLOAD_COMPLETE) {
+            sendDone();
+        } else {
+            WebServer.send(500, textContent, "Unknown error");
+        }
+    } else {
+        sendNotAllowed();
+    }
+}
+
 void handleUpload() {
     Logger.debug("handleUpload()");
     WebServer.debug();
 
-    HTTPMethod m = WebServer.method();
+    HTTPUpload& upload = WebServer.upload();
 
-    if (m == HTTP_POST || m == HTTP_PUT) {
-        String path = WebServer.arg("file_name");
-        String contents = WebServer.arg("plain");
-
-        if (!path.length()) {
-            WebServer.send(400, textContent, "Missing file_name");
-        } else if (!contents.length()) {
-            WebServer.send(400, textContent, "Missing body");
-        } else {
-            if (SPIFFS.exists(path)) {
-                if (m == HTTP_PUT) {
-                    if (!SPIFFS.remove(path)) {
-                        WebServer.send(500, textContent, "Error deleting existing file");
-                        return;
-                    }
-                } else {
-                    WebServer.send(400, textContent, "Resource already exists, try PUT to update");
-                    return;
-                }
-            }
-
-            File f = SPIFFS.open(path, "w");
-            if (f.print(contents) != contents.length()) {
-                WebServer.send(500, textContent, "Error writing file");
-            } else {
-                WebServer.send(200, jsonContent, successBody);
-            }
-
-            f.close();
+    if (upload.status == UPLOAD_FILE_START) {
+        if (uploadStatus == UPLOAD_INPROGRESS) {
+            uploadFile.close();
         }
-    } else {
-        sendNotAllowed();
+        uploadStatus = UPLOAD_INIT;
+        String filename = upload.filename;
+        if (WebServer.hasArg("filename")) {
+            filename = WebServer.arg("filename");
+        }
+        if (!filename.startsWith("/")) {
+            filename = "/" + filename;
+        }
+        Logger.debugf("handleUpload Name: %s", filename.c_str());
+
+        if (SPIFFS.exists(filename)) {
+            if (WebServer.method() == HTTP_POST) {
+                uploadStatus = UPLOAD_ERROR_EXISTS;
+            } else {
+                SPIFFS.remove(filename);
+            }
+        }
+
+        if (uploadStatus == UPLOAD_INIT) {
+            uploadFile = SPIFFS.open(filename, "w");
+            uploadStatus = UPLOAD_INPROGRESS;
+        }
+    } else if (upload.status == UPLOAD_FILE_WRITE) {
+        if (uploadStatus == UPLOAD_INPROGRESS) {
+            uploadFile.write(upload.buf, upload.currentSize);
+        }
+    } else if (upload.status == UPLOAD_FILE_END) {
+        if (uploadStatus == UPLOAD_INPROGRESS) {
+            uploadFile.close();
+            uploadStatus = UPLOAD_COMPLETE;
+        }
+        Logger.debugf("handleUpload Size: %i", upload.totalSize);
     }
 }
 
@@ -522,28 +548,6 @@ void handleReadMemory() {
     }
 }
 
-void handleSendCommand() {
-    Logger.debug("handleSendCommand()");
-    WebServer.debug();
-
-    uint8_t ret;
-
-    if (WebServer.hasArg("command")) {
-        uint8_t command = WebServer.arg("command").toInt();
-
-        if (WebServer.hasArg("value")) {
-            uint16_t value = WebServer.arg("value").toInt();
-            ret = UartComm.sendCommandWithValue(command, value);
-        } else {
-            ret = UartComm.sendCommand(command);
-        }
-
-        WebServer.send(200, textContent, String(ret));
-    } else {
-        sendNotAllowed();
-    }
-}
-
 void handleClientID() {
     Logger.debug("handleClientID()");
     WebServer.debug();
@@ -597,16 +601,39 @@ void handleDeviceInfo() {
             obj = doc.as<JsonObject>();
             Device.fromJson(obj);
             Device.persist();
-            Device.needsSync = true;
+            Device.syncDevice = true;
         }
 
         doc.clear();
+    } else if (WebServer.method() == HTTP_PUT) {
+        DeserializationError err = deserializeJson(doc, WebServer.arg("plain"));
+
+        if (!err) {
+            obj = doc.as<JsonObject>();
+            Device.updateState(obj);
+        }
     }
     obj = doc.to<JsonObject>();
     Device.toJson(obj);
     serializeJson(obj, buffer);
 
     WebServer.send(200, jsonContent, buffer);
+}
+
+void handleChannels() {
+    Logger.debug("handleChannels()");
+    WebServer.debug();
+
+    if (WebServer.hasArg("ch0")) {
+        uint16_t value = WebServer.arg("ch0").toInt();
+        UartComm.sendDimmerValue(0, value);
+    }
+    if (WebServer.hasArg("ch1")) {
+        uint16_t value = WebServer.arg("ch1").toInt();
+        UartComm.sendDimmerValue(1, value);
+    }
+
+    sendDone();
 }
 
 void handleNotFound() {

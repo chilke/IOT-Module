@@ -21,11 +21,17 @@ To cc AWS on interdevice/app messages, add lambda=true to payload
 App->Device
 UpdateDeviceInfo
 UpdateDeviceState
+    Need handle method for IotDevice class
+        This will check timer to persist state changes and send over mqtt.
+            If timer expired, persist to disk and set syncState flag.
+        This will check if update needs to be sent to pic chip.
+            If state updated and not pending command, then send command.
+    On command receipt, update data model, set update flag, and reset persist timer.
 AddSchedule
 DeleteSchedule
 
 App->Devices
-Query
+GetDevices
 
 App->AWS
 GetDevices

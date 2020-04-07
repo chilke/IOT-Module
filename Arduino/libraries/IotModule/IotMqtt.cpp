@@ -5,10 +5,14 @@
 #include <IotModule.h>
 #include <IotMqtt.h>
 
-void messageReceived(char* topic, byte* payload, unsigned int length) {
-    Logger.infof("Received [%s]: %.*s", topic, length, (char*)payload);
+void mqttMessageReceived(char* topic, byte* payload, unsigned int length) {
+    Mqtt.messageReceived(topic, (char*)payload, length);
+}
+
+void IotMqtt::messageReceived(char* topic, char* payload, unsigned int length) {
+    Logger.infof("Received [%s]: %.*s", topic, length, payload);
     DynamicJsonDocument doc(JSON_BUFFER_SIZE);
-    DeserializationError err = deserializeJson(doc, (char *)payload, length);
+    DeserializationError err = deserializeJson(doc, payload, length);
 
     if (err) {
         Logger.error("MQTT json error");
@@ -18,25 +22,31 @@ void messageReceived(char* topic, byte* payload, unsigned int length) {
     if (doc.containsKey("cmd")) {
         String cmd = doc["cmd"];
 
-        if (cmd == "update_device") {
+        JsonObject obj = doc.as<JsonObject>();
+
+        if (cmd == "update_state") {
+            Logger.debug("Update device state");
+            Device.updateState(obj);
+        } else if (cmd == "update_device") {
             Logger.debug("Updated device info");
-            JsonObject obj = doc.as<JsonObject>();
             Device.fromJson(obj);
-            Device.needsSync = true;
+            Device.syncDevice = true;
+        } else if (cmd == "get_devices") {
+            queryReceived = true;
         }
     }
 }
 
-void IotMqtt::sendDeviceInfo() {
+void IotMqtt::sendDeviceInfo(const char topic[], const char cmd[], bool aws) {
     DynamicJsonDocument doc(JSON_BUFFER_SIZE);
     JsonObject obj = doc.to<JsonObject>();
     Device.toJson(obj);
     String buffer;
-    obj["cmd"] = "update_device";
-    obj["lambda"] = true;
+    obj["cmd"] = cmd;
+    obj["lambda"] = aws;
     serializeJson(obj, buffer);
 
-    client.publish("to/apps", buffer.c_str());
+    client.publish(topic, buffer.c_str());
 }
 
 void IotMqtt::init() {
@@ -56,7 +66,7 @@ void IotMqtt::init() {
 
         client.setServer(hostname.c_str(), port);
         client.setClient(net);
-        client.setCallback(messageReceived);
+        client.setCallback(mqttMessageReceived);
 
         loaded = true;
     }
@@ -67,6 +77,7 @@ void IotMqtt::connect(uint32_t m) {
         Logger.debug("MQTT connecting ");
         if (client.connect(Device.clientID.c_str()))
         {
+            char topicBuf[20];
             Logger.debug("connected!");
             sprintf(topicBuf, "to/%s", Device.clientID.c_str());
             if (!client.subscribe(topicBuf)) {
@@ -76,7 +87,8 @@ void IotMqtt::connect(uint32_t m) {
                 Logger.debug("Subscribe failed to all");
                 client.disconnect();
             } else {
-                Device.needsSync = true;
+                Device.syncDevice = true;
+                queryReceived = false;
             }
         }
         lastConnectAttempt = m;
@@ -89,10 +101,18 @@ void IotMqtt::handle() {
         if (client.connected()) {
             client.loop();
 
-            if (Device.needsSync) {
+            if (Device.syncDevice) {
                 Logger.debug("Sending device info");
-                sendDeviceInfo();
-                Device.needsSync = false;
+                sendDeviceInfo("to/apps", "update_device", true);
+                Device.syncDevice = false;
+                Device.syncState = false;
+            } else if (Device.syncState) {
+                Logger.debug("Sending state info");
+                sendDeviceInfo("to/apps", "update_state", false);
+                Device.syncState = false;
+            } else if (queryReceived) {
+                sendDeviceInfo("to/apps", "get_devices_resp", false);
+                queryReceived = false;
             }
         } else {
             connect(m);

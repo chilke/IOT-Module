@@ -23,6 +23,7 @@ void setup() {
     }
 
     Logger.init();
+    UartComm.init();
 
     {
         uint32_t buf[RESET_SAFEMODE_SIZE];
@@ -97,7 +98,7 @@ void loop() {
     if (!safeMode) {
         WCM.handle();
         WebServer.handleClient();
-
+        Device.handle();
         if (WiFi.status() == WL_CONNECTED) {
             if (Time.isSet()) {
                 Mqtt.handle();

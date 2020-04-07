@@ -7,6 +7,7 @@
 #define DIM_CH_NAME_ATTR "nm"
 #define DIM_CH_MAX_ATTR "mx"
 #define DIM_CH_MIN_ATTR "mn"
+#define DIM_CH_CUR_ATTR "cv"
 #define DIM_CH_ID_ATTR "id"
 #define DIM_CH_SWITCH_ATTR "sw"
 
@@ -15,11 +16,13 @@ public:
     String name;
     uint16_t maxValue;
     uint16_t minValue;
+    uint16_t curValue;
     uint8_t id;
     bool isSwitch;
 
     void fromJson(JsonObject &obj);
     void toJson(JsonObject &obj);
+    bool updateState(JsonObject &obj);
 
     static int idFromJson(JsonObject &obj);
 };

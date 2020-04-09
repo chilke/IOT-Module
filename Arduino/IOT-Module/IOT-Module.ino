@@ -23,7 +23,6 @@ void setup() {
     }
 
     Logger.init();
-    UartComm.init();
 
     {
         uint32_t buf[RESET_SAFEMODE_SIZE];
@@ -87,6 +86,8 @@ void setup() {
         WiFi.softAPConfig(0x0140A8C0, 0x0140A8C0, 0x00FFFFFF);
         WiFi.softAP(SAFE_MODE_SSID);
     } else {
+        UartComm.init();
+        Device.init();
         WCM.begin(apMode);
         WebServer.begin();
         Mqtt.init();

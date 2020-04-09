@@ -14,7 +14,6 @@ void handleSendFile();
 void handleCpu();
 void handleReadDeviceId();
 void handleReadMemory();
-void handleClientID();
 void handleBackupCerts();
 void handleRestoreCerts();
 void handleDeviceInfo();

@@ -9,7 +9,6 @@
 #define DIM_CH_MIN_ATTR "mn"
 #define DIM_CH_CUR_ATTR "cv"
 #define DIM_CH_ID_ATTR "id"
-#define DIM_CH_SWITCH_ATTR "sw"
 
 class IotDimmerChannel {
 public:
@@ -18,11 +17,11 @@ public:
     uint16_t minValue;
     uint16_t curValue;
     uint8_t id;
-    bool isSwitch;
 
-    void fromJson(JsonObject &obj);
-    void toJson(JsonObject &obj);
-    bool updateState(JsonObject &obj);
+    void updateInfo(JsonObject &obj);
+    void updateState(JsonObject &obj);
+    void infoJson(JsonObject &obj);
+    void stateJson(JsonObject &obj);
 
     static int idFromJson(JsonObject &obj);
 };

@@ -5,6 +5,8 @@
 #include <IotDimmerChannel.h>
 
 #define DEVICE_CLIENT_ATTR "ci"
+#define DEVICE_HOST_ATTR "hn"
+#define DEVICE_PORT_ATTR "pt"
 #define DEVICE_TYPE_ATTR "tp"
 #define DEVICE_LOC_ATTR "lo"
 #define DEVICE_TZ_ATTR "tz"
@@ -25,6 +27,8 @@ typedef enum device_type_t {
 class IotDevice {
 public:
     String clientID;
+    String mqttHost;
+    uint16_t mqttPort;
     DeviceType type;
     String location;
     String timezone;
@@ -38,15 +42,15 @@ public:
     bool syncState;
 
     IotDevice();
-    bool init();
-    void persist();
-    void fromJson(JsonObject &obj);
-    void toJson(JsonObject &obj);
-    bool setClientID(String cid);
+    void init();
+    void persistInfo();
+    void persistState();
+    void updateInfo(JsonObject &obj);
     void updateState(JsonObject &obj);
+    void updateState(JsonObject &obj, bool sync);
+    void infoJson(JsonObject &obj);
+    void stateJson(JsonObject &obj);
     void handle();
-private:
-    bool loaded;
 };
 
 extern IotDevice Device;

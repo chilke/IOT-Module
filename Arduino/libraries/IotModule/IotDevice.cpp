@@ -6,33 +6,36 @@
 #include <IotDevice.h>
 
 IotDevice::IotDevice() {
-    loaded = false;
     syncDevice = false;
     syncState = false;
     stateUpdateTime = 0;
 }
 
-bool IotDevice::init() {
-    if (loaded) {
-        return true;
-    }
-    
-    if (SPIFFS.exists("/device_config.json")) {
-        DynamicJsonDocument doc(JSON_BUFFER_SIZE);
-        File f = SPIFFS.open("/device_config.json", "r");
+void IotDevice::init() {
+    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+    if (SPIFFS.exists("/device_info.json")) {
+        File f = SPIFFS.open("/device_info.json", "r");
         DeserializationError err = deserializeJson(doc, f);
 
-        if (!err && doc.containsKey(DEVICE_CLIENT_ATTR)) {
+        if (!err) {
             JsonObject obj = doc.as<JsonObject>();
-            clientID = doc[DEVICE_CLIENT_ATTR].as<String>();
-            fromJson(obj);
-            loaded = true;
+            updateInfo(obj);
+        }
+
+        f.close();
+        doc.clear();
+    }
+    if (SPIFFS.exists("/device_state.json")) {
+        File f = SPIFFS.open("/device_state.json", "r");
+        DeserializationError err = deserializeJson(doc, f);
+
+        if (!err) {
+            JsonObject obj = doc.as<JsonObject>();
+            updateState(obj, false);
         }
 
         f.close();
     }
-
-    return loaded;
 }
 
 void IotDevice::handle() {
@@ -42,37 +45,39 @@ void IotDevice::handle() {
             Logger.debug("Persisting device state");
             syncState = true;
             stateUpdateTime = 0;
-            persist();
+            persistState();
         }
     }
 }
 
-bool IotDevice::setClientID(String cid) {
-    if (SPIFFS.exists("/device_config.json")) {
-        return false;
-    }
-
-    clientID = cid;
-    loaded = true;
-    return true;
-}
-
-void IotDevice::persist() {
+void IotDevice::persistInfo() {
     DynamicJsonDocument doc(JSON_BUFFER_SIZE);
-    File f = SPIFFS.open("/device_config.json", "w");
+    File f = SPIFFS.open("/device_info.json", "w");
     JsonObject obj = doc.to<JsonObject>();
-    toJson(obj);
+    infoJson(obj);
     serializeJson(obj, f);
     f.close();
 }
 
-void IotDevice::fromJson(JsonObject &obj) {
+void IotDevice::persistState() {
+    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+    File f = SPIFFS.open("/device_state.json", "w");
+    JsonObject obj = doc.to<JsonObject>();
+    stateJson(obj);
+    serializeJson(obj, f);
+    f.close();
+}
+
+void IotDevice::updateInfo(JsonObject &obj) {
+    clientID = obj[DEVICE_CLIENT_ATTR] | String();
+    mqttHost = obj[DEVICE_HOST_ATTR] | String();
+    mqttPort = obj[DEVICE_PORT_ATTR];
     String tmpStr = obj[DEVICE_TYPE_ATTR].as<String>();
     if (tmpStr == DIMMER_TYPE_NAME) {
         type = DeviceTypeDimmer;
         JsonArray chs = obj[DEVICE_CH_ATTR].as<JsonArray>();
         for (JsonObject ch : chs) {
-            channels[IotDimmerChannel::idFromJson(ch)].fromJson(ch);
+            channels[IotDimmerChannel::idFromJson(ch)].updateInfo(ch);
         }
     } else {
         type = DeviceTypeNone;
@@ -85,16 +90,28 @@ void IotDevice::fromJson(JsonObject &obj) {
     }
 }
 
-void IotDevice::toJson(JsonObject &obj) {
+void IotDevice::infoJson(JsonObject &obj) {
     obj[DEVICE_CLIENT_ATTR] = clientID;
+    obj[DEVICE_HOST_ATTR] = mqttHost;
+    obj[DEVICE_PORT_ATTR] = mqttPort;
     String typeStr = "";
     if (type == DeviceTypeDimmer) {
         typeStr = DIMMER_TYPE_NAME;
 
-        JsonArray chs = obj.createNestedArray(DEVICE_CH_ATTR);
-        for (int i = 0; i < DIMMER_CH_CNT; i++) {
-            JsonObject ch = chs.createNestedObject();
-            channels[i].toJson(ch);
+        JsonArray chs;
+
+        if (obj.containsKey(DEVICE_CH_ATTR)) {
+            chs = obj[DEVICE_CH_ATTR].as<JsonArray>();
+            for (int i = 0; i < DIMMER_CH_CNT; i++) {
+                JsonObject ch = chs[i];
+                channels[i].infoJson(ch);
+            }
+        } else {
+            chs = obj.createNestedArray(DEVICE_CH_ATTR);
+            for (int i = 0; i < DIMMER_CH_CNT; i++) {
+                JsonObject ch = chs.createNestedObject();
+                channels[i].infoJson(ch);
+            }
         }
     }
     obj[DEVICE_TYPE_ATTR] = typeStr;
@@ -103,19 +120,39 @@ void IotDevice::toJson(JsonObject &obj) {
 }
 
 void IotDevice::updateState(JsonObject &obj) {
+    updateState(obj, true);
+}
+
+void IotDevice::updateState(JsonObject &obj, bool sync) {
     if (type == DeviceTypeDimmer) {
         JsonArray chs = obj[DEVICE_CH_ATTR].as<JsonArray>();
-        bool updated = false;
         for (JsonObject ch : chs) {
-            if (channels[IotDimmerChannel::idFromJson(ch)].updateState(ch)) {
-                updated = true;
-            }
+            channels[IotDimmerChannel::idFromJson(ch)].updateState(ch);
         }
 
-        if (updated) {
+        if (sync) {
             stateUpdateTime = millis();
             if (stateUpdateTime == 0) {
                 stateUpdateTime = 1;
+            }
+        }
+    }
+}
+
+void IotDevice::stateJson(JsonObject &obj) {
+    if (type == DeviceTypeDimmer) {
+        JsonArray chs;
+        if (obj.containsKey(DEVICE_CH_ATTR)) {
+            chs = obj[DEVICE_CH_ATTR].as<JsonArray>();
+            for (int i = 0; i < DIMMER_CH_CNT; i++) {
+                JsonObject ch = chs[i];
+                channels[i].stateJson(ch);
+            }
+        } else {
+            chs = obj.createNestedArray(DEVICE_CH_ATTR);
+            for (int i = 0; i < DIMMER_CH_CNT; i++) {
+                JsonObject ch = chs.createNestedObject();
+                channels[i].stateJson(ch);
             }
         }
     }

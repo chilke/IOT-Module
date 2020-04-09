@@ -19,6 +19,7 @@
 
 class IotMqtt {
 public:
+    IotMqtt();
     void init();
     void handle();
 
@@ -29,9 +30,6 @@ private:
     bool loadCerts();
     void connect(uint32_t m);
     void sendDeviceInfo(const char topic[], const char cmd[], bool aws);
-
-    String hostname;
-    int port;
 
     BearSSL::X509List cert;
     BearSSL::X509List client_crt;

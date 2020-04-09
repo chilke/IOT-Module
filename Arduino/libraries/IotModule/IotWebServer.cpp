@@ -32,7 +32,6 @@ IotWebServer::IotWebServer(int port)
     on("/cpu", handleCpu);
     on("/read_device_id", handleReadDeviceId);
     on("/read", handleReadMemory);
-    on("/client_id", handleClientID);
     on("/backup_certs", handleBackupCerts);
     on("/restore_certs", handleRestoreCerts);
     on("/device_info", handleDeviceInfo);
@@ -548,22 +547,6 @@ void handleReadMemory() {
     }
 }
 
-void handleClientID() {
-    Logger.debug("handleClientID()");
-    WebServer.debug();
-
-    if (WebServer.hasArg("id")) {
-        if (Device.setClientID(WebServer.arg("id"))) {
-            Device.persist();
-            sendDone();
-        } else {
-            sendNotAllowed();
-        }
-    } else {
-        sendNotAllowed();
-    }
-}
-
 void handleBackupCerts() {
     Logger.debug("handleBackupCerts()");
     WebServer.debug();
@@ -599,8 +582,8 @@ void handleDeviceInfo() {
 
         if (!err) {
             obj = doc.as<JsonObject>();
-            Device.fromJson(obj);
-            Device.persist();
+            Device.updateInfo(obj);
+            Device.persistInfo();
             Device.syncDevice = true;
         }
 
@@ -614,7 +597,8 @@ void handleDeviceInfo() {
         }
     }
     obj = doc.to<JsonObject>();
-    Device.toJson(obj);
+    Device.infoJson(obj);
+    Device.stateJson(obj);
     serializeJson(obj, buffer);
 
     WebServer.send(200, jsonContent, buffer);

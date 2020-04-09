@@ -9,6 +9,10 @@ void mqttMessageReceived(char* topic, byte* payload, unsigned int length) {
     Mqtt.messageReceived(topic, (char*)payload, length);
 }
 
+IotMqtt::IotMqtt() {
+    loaded = false;
+}
+
 void IotMqtt::messageReceived(char* topic, char* payload, unsigned int length) {
     Logger.infof("Received [%s]: %.*s", topic, length, payload);
     DynamicJsonDocument doc(JSON_BUFFER_SIZE);
@@ -29,7 +33,7 @@ void IotMqtt::messageReceived(char* topic, char* payload, unsigned int length) {
             Device.updateState(obj);
         } else if (cmd == "update_device") {
             Logger.debug("Updated device info");
-            Device.fromJson(obj);
+            Device.updateInfo(obj);
             Device.syncDevice = true;
         } else if (cmd == "get_devices") {
             queryReceived = true;
@@ -40,7 +44,8 @@ void IotMqtt::messageReceived(char* topic, char* payload, unsigned int length) {
 void IotMqtt::sendDeviceInfo(const char topic[], const char cmd[], bool aws) {
     DynamicJsonDocument doc(JSON_BUFFER_SIZE);
     JsonObject obj = doc.to<JsonObject>();
-    Device.toJson(obj);
+    Device.infoJson(obj);
+    Device.stateJson(obj);
     String buffer;
     obj["cmd"] = cmd;
     obj["lambda"] = aws;
@@ -50,26 +55,34 @@ void IotMqtt::sendDeviceInfo(const char topic[], const char cmd[], bool aws) {
 }
 
 void IotMqtt::init() {
-    loaded = false;
-    if (Device.init()) {
-        lastConnectAttempt = millis() - MQTT_CONNECT_RETRY;
-
-        if (!loadCerts()) {
-            return;
-        }
-        
-        hostname = "a1r32q860r2zlh-ats.iot.us-east-2.amazonaws.com";
-        port = 8883;
-
-        net.setTrustAnchors(&cert);
-        net.setClientRSACert(&client_crt, &key);
-
-        client.setServer(hostname.c_str(), port);
-        client.setClient(net);
-        client.setCallback(mqttMessageReceived);
-
-        loaded = true;
+    if (Device.mqttHost.length() == 0) {
+        return;
     }
+
+    if (Device.mqttPort == 0) {
+        return;
+    }
+
+    if (Device.clientID.length() == 0) {
+        return;
+    }
+
+    if (!loadCerts()) {
+        return;
+    }
+    
+//        hostname = "a1r32q860r2zlh-ats.iot.us-east-2.amazonaws.com";
+//    port = 8883;
+
+    net.setTrustAnchors(&cert);
+    net.setClientRSACert(&client_crt, &key);
+
+    client.setServer(Device.mqttHost.c_str(), Device.mqttPort);
+    client.setClient(net);
+    client.setCallback(mqttMessageReceived);
+
+    lastConnectAttempt = millis() - MQTT_CONNECT_RETRY;
+    loaded = true;
 }
 
 void IotMqtt::connect(uint32_t m) {

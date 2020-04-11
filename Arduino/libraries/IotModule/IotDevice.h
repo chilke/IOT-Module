@@ -2,7 +2,7 @@
 #define DEVICE_H
 
 #include <ArduinoJson.h>
-#include <IotDimmerChannel.h>
+#include <IotDimmer.h>
 
 #define DEVICE_CLIENT_ATTR "ci"
 #define DEVICE_HOST_ATTR "hn"
@@ -10,8 +10,7 @@
 #define DEVICE_TYPE_ATTR "tp"
 #define DEVICE_LOC_ATTR "lo"
 #define DEVICE_TZ_ATTR "tz"
-#define DEVICE_CH_ATTR "ch"
-
+#define DEVICE_PERIPHERAL_ATTR "pr"
 
 #define STATE_UPDATE_TIME 1000
 
@@ -21,8 +20,12 @@ typedef enum device_type_t {
 } DeviceType;
 
 typedef union device_state_t {
-    DimmerChannelState dimmerChannelState;
+    DimmerState dimmerState;
 } DeviceState;
+
+typedef union device_slave_t {
+    IotDimmer dimmer;
+} DeviceSlave;
 
 class IotDevice {
 public:
@@ -33,7 +36,7 @@ public:
     String location;
     String timezone;
 
-    IotDimmerChannel channels[DIMMER_CH_CNT];
+    DeviceSlave slave;
 
     uint32_t stateUpdateTime;
     bool syncPic;

@@ -593,7 +593,6 @@ void handleDeviceInfo() {
 
     obj = doc.to<JsonObject>();
     Device.infoJson(obj);
-    Device.stateJson(obj);
     serializeJson(obj, buffer);
 
     WebServer.send(200, jsonContent, buffer);

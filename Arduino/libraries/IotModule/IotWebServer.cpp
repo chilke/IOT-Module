@@ -35,7 +35,8 @@ IotWebServer::IotWebServer(int port)
     on("/backup_certs", handleBackupCerts);
     on("/restore_certs", handleRestoreCerts);
     on("/device_info", handleDeviceInfo);
-    on("/channels", handleChannels);
+    on("/device_state", handleDeviceState);
+    on("/schedule", handleSchedule);
 
     onNotFound(handleNotFound);
 
@@ -588,14 +589,8 @@ void handleDeviceInfo() {
         }
 
         doc.clear();
-    } else if (WebServer.method() == HTTP_PUT) {
-        DeserializationError err = deserializeJson(doc, WebServer.arg("plain"));
-
-        if (!err) {
-            obj = doc.as<JsonObject>();
-            Device.updateState(obj);
-        }
     }
+
     obj = doc.to<JsonObject>();
     Device.infoJson(obj);
     Device.stateJson(obj);
@@ -604,20 +599,63 @@ void handleDeviceInfo() {
     WebServer.send(200, jsonContent, buffer);
 }
 
-void handleChannels() {
-    Logger.debug("handleChannels()");
+void handleDeviceState() {
+    Logger.debug("handleDeviceState()");
     WebServer.debug();
 
-    if (WebServer.hasArg("ch0")) {
-        uint16_t value = WebServer.arg("ch0").toInt();
-        UartComm.sendDimmerValue(0, value);
-    }
-    if (WebServer.hasArg("ch1")) {
-        uint16_t value = WebServer.arg("ch1").toInt();
-        UartComm.sendDimmerValue(1, value);
+    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+    JsonObject obj;
+    String buffer;
+
+    if (WebServer.method() == HTTP_POST) {
+        DeserializationError err = deserializeJson(doc, WebServer.arg("plain"));
+
+        if (!err) {
+            obj = doc.as<JsonObject>();
+            Device.updateState(obj);
+        }
+
+        doc.clear();
     }
 
-    sendDone();
+    obj = doc.to<JsonObject>();
+    Device.stateJson(obj);
+    serializeJson(obj, buffer);
+
+    WebServer.send(200, jsonContent, buffer);
+}
+
+void handleSchedule() {
+    Logger.debug("handleSchedule()");
+    WebServer.debug();
+
+    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+    JsonArray arr;
+    JsonObject obj;
+    String buffer;
+
+    if (WebServer.method() == HTTP_POST) {
+        DeserializationError err = deserializeJson(doc, WebServer.arg("plain"));
+
+        if (!err) {
+            obj = doc.as<JsonObject>();
+            Scheduler.addSchedule(obj);
+        }
+
+        doc.clear();
+    } else if (WebServer.method() == HTTP_DELETE) {
+        if (WebServer.hasArg("id")) {
+            int id = WebServer.arg("id").toInt();
+            Scheduler.deleteSchedule(id);
+        }
+    }
+
+    arr = doc.to<JsonArray>();
+    Scheduler.getSchedules(arr);
+
+    serializeJson(arr, buffer);
+
+    WebServer.send(200, jsonContent, buffer);
 }
 
 void handleNotFound() {

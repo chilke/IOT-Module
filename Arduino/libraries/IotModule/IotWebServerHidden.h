@@ -17,7 +17,8 @@ void handleReadMemory();
 void handleBackupCerts();
 void handleRestoreCerts();
 void handleDeviceInfo();
-void handleChannels();
+void handleDeviceState();
+void handleSchedule();
 void handleNotFound();
 
 #endif

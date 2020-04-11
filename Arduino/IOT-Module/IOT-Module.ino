@@ -88,6 +88,7 @@ void setup() {
     } else {
         UartComm.init();
         Device.init();
+        Scheduler.init();
         WCM.begin(apMode);
         WebServer.begin();
         Mqtt.init();

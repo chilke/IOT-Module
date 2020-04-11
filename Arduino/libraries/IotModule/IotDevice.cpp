@@ -158,4 +158,24 @@ void IotDevice::stateJson(JsonObject &obj) {
     }
 }
 
+bool IotDevice::stateFromJson(DeviceState &state, JsonObject &obj) {
+    if (type == DeviceTypeDimmer) {
+
+    } else {
+        return false;
+    }
+    
+    return true;
+}
+
+bool IotDevice::stateToJson(DeviceState &state, JsonObject &obj) {
+    if (type == DeviceTypeDimmer) {
+
+    } else {
+        return false;
+    }
+
+    return true;
+}
+
 IotDevice Device;

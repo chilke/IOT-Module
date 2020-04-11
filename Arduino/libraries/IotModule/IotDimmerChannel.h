@@ -10,6 +10,14 @@
 #define DIM_CH_CUR_ATTR "cv"
 #define DIM_CH_ID_ATTR "id"
 
+#define DIMMER_CH_CNT 2
+
+#define DIMMER_TYPE_NAME "Dim"
+
+typedef struct dimmer_channel_state_t {
+    uint16_t values[DIMMER_CH_CNT];
+} DimmerChannelState;
+
 class IotDimmerChannel {
 public:
     String name;
@@ -22,6 +30,9 @@ public:
     void updateState(JsonObject &obj);
     void infoJson(JsonObject &obj);
     void stateJson(JsonObject &obj);
+
+    static void stateFromJson(DimmerChannelState &state, JsonObject &obj);
+    static void stateToJson(DimmeryChannelState &state, JsonObject &obj);
 
     static int idFromJson(JsonObject &obj);
 };

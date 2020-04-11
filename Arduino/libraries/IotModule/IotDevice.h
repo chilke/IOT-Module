@@ -12,10 +12,6 @@
 #define DEVICE_TZ_ATTR "tz"
 #define DEVICE_CH_ATTR "ch"
 
-#define DIMMER_CH_CNT 2
-
-#define DIMMER_TYPE_NAME "Dim"
-
 
 #define STATE_UPDATE_TIME 1000
 
@@ -23,6 +19,10 @@ typedef enum device_type_t {
     DeviceTypeDimmer,
     DeviceTypeNone
 } DeviceType;
+
+typedef union device_state_t {
+    DimmerChannelState dimmerChannelState;
+} DeviceState;
 
 class IotDevice {
 public:
@@ -51,6 +51,9 @@ public:
     void infoJson(JsonObject &obj);
     void stateJson(JsonObject &obj);
     void handle();
+
+    bool stateFromJson(DeviceState &state, JsonObject &obj);
+    bool stateToJson(DeviceState &state, JsonObject &obj);
 };
 
 extern IotDevice Device;

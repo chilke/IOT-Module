@@ -47,11 +47,11 @@ void IotScheduler::persistState(int id, JsonObject &state) {
     f.close();
 }
 
-void IotScheduler::loadState(int id, String &state) {
+void IotScheduler::loadState(int id, JsonObject &state) {
     char filename[20];
     sprintf(filename, "/schedule%u.json", id);
     File f = SPIFFS.open(filename, "r");
-    state = f.readString();
+    //state = f.readString();
     f.close();
 }
 
@@ -101,7 +101,7 @@ void IotScheduler::deleteSchedule(int id) {
 }
 
 void IotScheduler::getSchedules(JsonArray &arr) {
-    getSchedules(arr, true;)
+    getSchedules(arr, true);
 }
 
 void IotScheduler::getSchedules(JsonArray &arr, bool includeStates) {

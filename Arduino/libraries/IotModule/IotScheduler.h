@@ -34,6 +34,7 @@ public:
     void handle();
 
 private:
+    void getSchedules(JsonArray &arr, bool includeStates);
     void loadState(int id, JsonObject &obj);
     void persistState(int id, JsonObject &state);
     void persist();

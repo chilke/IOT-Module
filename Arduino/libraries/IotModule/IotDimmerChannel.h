@@ -32,7 +32,7 @@ public:
     void stateJson(JsonObject &obj);
 
     static void stateFromJson(DimmerChannelState &state, JsonObject &obj);
-    static void stateToJson(DimmeryChannelState &state, JsonObject &obj);
+    static void stateToJson(DimmerChannelState &state, JsonObject &obj);
 
     static int idFromJson(JsonObject &obj);
 };

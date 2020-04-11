@@ -5,7 +5,7 @@
 #include <eboot_command.h>
 
 #include <IotDevice.h>
-#include <IotDimmerChannel.h>
+#include <IotDimmer.h>
 #include <IotLogger.h>
 #include <WifiConnectionManager.h>
 #include <IotWebServer.h>

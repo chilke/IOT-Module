@@ -73,12 +73,10 @@ void IotDevice::updateInfo(JsonObject &obj) {
     mqttHost = obj[DEVICE_HOST_ATTR] | String();
     mqttPort = obj[DEVICE_PORT_ATTR];
     String tmpStr = obj[DEVICE_TYPE_ATTR].as<String>();
-    if (tmpStr == DIMMER_TYPE_NAME) {
+    if (tmpStr == DIM_TYPE_NAME) {
         type = DeviceTypeDimmer;
-        JsonArray chs = obj[DEVICE_CH_ATTR].as<JsonArray>();
-        for (JsonObject ch : chs) {
-            channels[IotDimmerChannel::idFromJson(ch)].updateInfo(ch);
-        }
+        JsonObject periph = obj[DEVICE_PERIPHERAL_ATTR];
+        slave.dimmer.updateInfo(periph);
     } else {
         type = DeviceTypeNone;
     }
@@ -96,23 +94,15 @@ void IotDevice::infoJson(JsonObject &obj) {
     obj[DEVICE_PORT_ATTR] = mqttPort;
     String typeStr = "";
     if (type == DeviceTypeDimmer) {
-        typeStr = DIMMER_TYPE_NAME;
-
-        JsonArray chs;
-
-        if (obj.containsKey(DEVICE_CH_ATTR)) {
-            chs = obj[DEVICE_CH_ATTR].as<JsonArray>();
-            for (int i = 0; i < DIMMER_CH_CNT; i++) {
-                JsonObject ch = chs[i];
-                channels[i].infoJson(ch);
-            }
+        typeStr = DIM_TYPE_NAME;
+        JsonObject periph;
+        if (obj.containsKey(DEVICE_PERIPHERAL_ATTR)) {
+            periph = obj[DEVICE_PERIPHERAL_ATTR].as<JsonObject>();
         } else {
-            chs = obj.createNestedArray(DEVICE_CH_ATTR);
-            for (int i = 0; i < DIMMER_CH_CNT; i++) {
-                JsonObject ch = chs.createNestedObject();
-                channels[i].infoJson(ch);
-            }
+            periph = obj.createNestedObject(DEVICE_PERIPHERAL_ATTR);
         }
+
+        slave.dimmer.infoJson(periph);
     }
     obj[DEVICE_TYPE_ATTR] = typeStr;
     obj[DEVICE_LOC_ATTR] = location;
@@ -125,36 +115,28 @@ void IotDevice::updateState(JsonObject &obj) {
 
 void IotDevice::updateState(JsonObject &obj, bool sync) {
     if (type == DeviceTypeDimmer) {
-        JsonArray chs = obj[DEVICE_CH_ATTR].as<JsonArray>();
-        for (JsonObject ch : chs) {
-            channels[IotDimmerChannel::idFromJson(ch)].updateState(ch);
-        }
+        JsonObject periph = obj[DEVICE_PERIPHERAL_ATTR];
+        slave.dimmer.updateState(periph);
+    }
 
-        if (sync) {
-            stateUpdateTime = millis();
-            if (stateUpdateTime == 0) {
-                stateUpdateTime = 1;
-            }
+    if (sync) {
+        stateUpdateTime = millis();
+        if (stateUpdateTime == 0) {
+            stateUpdateTime = 1;
         }
     }
 }
 
 void IotDevice::stateJson(JsonObject &obj) {
     if (type == DeviceTypeDimmer) {
-        JsonArray chs;
-        if (obj.containsKey(DEVICE_CH_ATTR)) {
-            chs = obj[DEVICE_CH_ATTR].as<JsonArray>();
-            for (int i = 0; i < DIMMER_CH_CNT; i++) {
-                JsonObject ch = chs[i];
-                channels[i].stateJson(ch);
-            }
+        JsonObject periph;
+        if (obj.containsKey(DEVICE_PERIPHERAL_ATTR)) {
+            periph = obj[DEVICE_PERIPHERAL_ATTR].as<JsonObject>();
         } else {
-            chs = obj.createNestedArray(DEVICE_CH_ATTR);
-            for (int i = 0; i < DIMMER_CH_CNT; i++) {
-                JsonObject ch = chs.createNestedObject();
-                channels[i].stateJson(ch);
-            }
+            periph = obj.createNestedObject(DEVICE_PERIPHERAL_ATTR);
         }
+
+        slave.dimmer.stateJson(periph);
     }
 }
 

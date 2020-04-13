@@ -1,7 +1,10 @@
 #ifndef IOT_SCHEDULER_H
 #define IOT_SCHEDULER_H
 
+#include <time.h>
 #include <ArduinoJson.h>
+
+#include <IotModule.h>
 
 #define SCHEDULE_STATE_ATTR "st"
 #define SCHEDULE_TIME_ATTR "tm"
@@ -17,11 +20,13 @@
 #define MAX_SCHEDULES 5
 
 typedef struct schedule_t {
+    uint8_t year;
     uint8_t month;
     uint8_t day;
     uint8_t hour;
     uint8_t minute;
     uint8_t dayMask;
+    DeviceState state;
 } Schedule;
 
 class IotScheduler {
@@ -30,13 +35,11 @@ public:
     void init();
     void addSchedule(JsonObject &obj);
     void deleteSchedule(int id);
-    void getSchedules(JsonArray &arr);
+    bool getSchedule(int id, JsonObject &obj);
     void handle();
 
+    time_t nextTime(int scheduleId, tm &curTime);
 private:
-    void getSchedules(JsonArray &arr, bool includeStates);
-    void loadState(int id, JsonObject &obj);
-    void persistState(int id, JsonObject &state);
     void persist();
     void addSchedule(JsonObject &obj, bool needsPersist);
 

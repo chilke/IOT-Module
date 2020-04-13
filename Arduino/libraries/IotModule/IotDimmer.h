@@ -38,8 +38,8 @@ public:
     void infoJson(JsonObject &obj);
     void stateJson(JsonObject &obj);
 
-    static void stateFromJson(DimmerState &state, JsonObject &obj);
-    static void stateToJson(DimmerState &state, JsonObject &obj);
+    void stateFromJson(DimmerState &state, JsonObject &obj);
+    void stateToJson(DimmerState &state, JsonObject &obj);
 };
 
 #endif

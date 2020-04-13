@@ -73,3 +73,20 @@ void IotDimmer::stateJson(JsonObject &obj) {
         }
     }
 }
+
+void IotDimmer::stateFromJson(DimmerState &state, JsonObject &obj) {
+    JsonArray chs = obj[DIM_CH_ATTR];
+    for (JsonObject ch : chs) {
+        int i = ch[DIM_CH_ID_ATTR];
+        state.values[i] = ch[DIM_CH_CUR_ATTR];
+    }
+}
+
+void IotDimmer::stateToJson(DimmerState &state, JsonObject &obj) {
+    JsonArray chs = obj.createNestedArray(DIM_CH_ATTR);
+    for (int i = 0; i < DIM_CH_CNT; i++) {
+        JsonObject ch = chs.createNestedObject();
+        ch[DIM_CH_ID_ATTR] = i;
+        ch[DIM_CH_CUR_ATTR] = state.values[i];
+    }
+}

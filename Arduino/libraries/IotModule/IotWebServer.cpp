@@ -1,5 +1,6 @@
 #include <FS.h>
 #include <ArduinoJson.h>
+#include <time.h>
 
 #include <IotModule.h>
 #include <WiFiConnectionManager.h>
@@ -37,6 +38,7 @@ IotWebServer::IotWebServer(int port)
     on("/device_info", handleDeviceInfo);
     on("/device_state", handleDeviceState);
     on("/schedule", handleSchedule);
+    on("/time", handleTime);
 
     onNotFound(handleNotFound);
 
@@ -648,13 +650,96 @@ void handleSchedule() {
             Scheduler.deleteSchedule(id);
         }
     }
-
-    arr = doc.to<JsonArray>();
-    Scheduler.getSchedules(arr);
-
-    serializeJson(arr, buffer);
+    bool first = true;
+    buffer = "[";
+    for (int i = 0; i < MAX_SCHEDULES; i++) {
+        obj = doc.to<JsonObject>();
+        if (Scheduler.getSchedule(i, obj)) {
+            if (!first) {
+                buffer += ',';
+            } else {
+                first = false;
+            }
+            serializeJson(obj, buffer);
+        }
+        doc.clear();
+    }
+    buffer += "]";
 
     WebServer.send(200, jsonContent, buffer);
+}
+
+void handleTime() {
+    Logger.debug("handleTime()");
+    WebServer.debug();
+
+    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+    String buffer;
+
+    if (WebServer.hasArg("plain")) {
+        DeserializationError err = deserializeJson(doc, WebServer.arg("plain"));
+        JsonObject obj = doc.as<JsonObject>();
+
+        tm *localTm;
+        bool a = false;
+
+        if (obj.containsKey("epoch")) {
+            time_t t = obj["epoch"];
+
+            localTm = localtime(&t);
+
+            obj["year"] = localTm->tm_year;
+            obj["month"] = localTm->tm_mon;
+            obj["month_day"] = localTm->tm_mday;
+            obj["hour"] = localTm->tm_hour;
+            obj["minute"] = localTm->tm_min;
+            obj["second"] = localTm->tm_sec;
+            obj["week_day"] = localTm->tm_wday;
+            obj["year_day"] = localTm->tm_yday;
+            obj["is_dst"] = localTm->tm_isdst;
+        } else {
+            a = true;
+            localTm = new tm();
+            localTm->tm_year = obj["year"];
+            localTm->tm_mon = obj["month"];
+            localTm->tm_mday = obj["month_day"];
+            localTm->tm_hour = obj["hour"];
+            localTm->tm_min = obj["minute"];
+            localTm->tm_sec = obj["second"];
+            localTm->tm_wday = obj["week_day"];
+            localTm->tm_yday = obj["year_day"];
+            localTm->tm_isdst = obj["is_dst"];
+
+            time_t t = mktime(localTm);
+
+            obj["epoch"] = t;
+            obj["year"] = localTm->tm_year;
+            obj["month"] = localTm->tm_mon;
+            obj["month_day"] = localTm->tm_mday;
+            obj["hour"] = localTm->tm_hour;
+            obj["minute"] = localTm->tm_min;
+            obj["second"] = localTm->tm_sec;
+            obj["week_day"] = localTm->tm_wday;
+            obj["year_day"] = localTm->tm_yday;
+            obj["is_dst"] = localTm->tm_isdst;
+        }
+
+        for (int i = 0; i < MAX_SCHEDULES; i++) {
+            time_t t = Scheduler.nextTime(i, *localTm);
+            Logger.debugf("Next time for %i, %lu", i, t);
+        }
+
+        if (a) {
+            delete localTm;
+        }
+
+        serializeJson(obj, buffer);
+        WebServer.send(200, jsonContent, buffer);
+
+        return;
+    }
+
+    sendNotAllowed();
 }
 
 void handleNotFound() {

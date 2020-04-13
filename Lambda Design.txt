@@ -75,10 +75,15 @@ DynamoDB - Store Minimal JSON instead of expanding
     ci is primary key
 
 
-Scheduler
-Uses cron like expression for time.
-Either full date specified for one off, or day's list for recurring.
-Fall back time change doesn't matter as repeat commands would have no ill effect.
-Spring forward time change need to track what last skipped command would have been
-    Simplest solution could be to walk minute by minute and save last command.
-On startup need to check if any schedules were skipped between last seen date and current date/time.  If any were skipped run most recent, else current state is last seen state.
+Scheduler Design
+Cases to handle:
+1. Time skips forward while running (this could be DST, TZ change, or time adjustment).
+    Need most recent schedule to run.
+    Need to set all missed one off schedules to inactive state.
+2. Time lags backward while running (save causes as above).
+    Handled automatically.  Recurring schedules will re-run, one off schedules will not re-run.
+3. Missed schedules while powered off.
+    Need most recent schedule to run.
+    Need to set all missed one off schedules to inactive state.
+
+Scheduler handler function.

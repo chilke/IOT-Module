@@ -142,7 +142,7 @@ void IotDevice::stateJson(JsonObject &obj) {
 
 bool IotDevice::stateFromJson(DeviceState &state, JsonObject &obj) {
     if (type == DeviceTypeDimmer) {
-
+        slave.dimmer.stateFromJson(state.dimmerState, obj);
     } else {
         return false;
     }
@@ -152,7 +152,7 @@ bool IotDevice::stateFromJson(DeviceState &state, JsonObject &obj) {
 
 bool IotDevice::stateToJson(DeviceState &state, JsonObject &obj) {
     if (type == DeviceTypeDimmer) {
-
+        slave.dimmer.stateToJson(state.dimmerState, obj);
     } else {
         return false;
     }

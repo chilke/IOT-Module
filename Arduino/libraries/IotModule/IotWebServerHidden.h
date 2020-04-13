@@ -19,6 +19,7 @@ void handleRestoreCerts();
 void handleDeviceInfo();
 void handleDeviceState();
 void handleSchedule();
+void handleTime();
 void handleNotFound();
 
 #endif

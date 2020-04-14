@@ -678,65 +678,75 @@ void handleTime() {
 
     if (WebServer.hasArg("plain")) {
         DeserializationError err = deserializeJson(doc, WebServer.arg("plain"));
-        JsonObject obj = doc.as<JsonObject>();
 
-        tm *localTm;
-        bool a = false;
+        if (!err) {
+            JsonObject obj = doc.as<JsonObject>();
 
-        if (obj.containsKey("epoch")) {
-            time_t t = obj["epoch"];
+            tm localTm;
+            time_t t;
 
-            localTm = localtime(&t);
+            if (obj.containsKey("epoch")) {
+                t = obj["epoch"];
 
-            obj["year"] = localTm->tm_year;
-            obj["month"] = localTm->tm_mon;
-            obj["month_day"] = localTm->tm_mday;
-            obj["hour"] = localTm->tm_hour;
-            obj["minute"] = localTm->tm_min;
-            obj["second"] = localTm->tm_sec;
-            obj["week_day"] = localTm->tm_wday;
-            obj["year_day"] = localTm->tm_yday;
-            obj["is_dst"] = localTm->tm_isdst;
-        } else {
-            a = true;
-            localTm = new tm();
-            localTm->tm_year = obj["year"];
-            localTm->tm_mon = obj["month"];
-            localTm->tm_mday = obj["month_day"];
-            localTm->tm_hour = obj["hour"];
-            localTm->tm_min = obj["minute"];
-            localTm->tm_sec = obj["second"];
-            localTm->tm_wday = obj["week_day"];
-            localTm->tm_yday = obj["year_day"];
-            localTm->tm_isdst = obj["is_dst"];
+                localtime_r(&t, &localTm);
 
-            time_t t = mktime(localTm);
+                obj["year"] = localTm.tm_year;
+                obj["month"] = localTm.tm_mon;
+                obj["month_day"] = localTm.tm_mday;
+                obj["hour"] = localTm.tm_hour;
+                obj["minute"] = localTm.tm_min;
+                obj["second"] = localTm.tm_sec;
+                obj["week_day"] = localTm.tm_wday;
+                obj["year_day"] = localTm.tm_yday;
+                obj["is_dst"] = localTm.tm_isdst;
+            } else {
+                localTm.tm_year = obj["year"];
+                localTm.tm_mon = obj["month"];
+                localTm.tm_mday = obj["month_day"];
+                localTm.tm_hour = obj["hour"];
+                localTm.tm_min = obj["minute"];
+                localTm.tm_sec = obj["second"];
+                localTm.tm_wday = obj["week_day"];
+                localTm.tm_yday = obj["year_day"];
+                localTm.tm_isdst = obj["is_dst"];
 
-            obj["epoch"] = t;
-            obj["year"] = localTm->tm_year;
-            obj["month"] = localTm->tm_mon;
-            obj["month_day"] = localTm->tm_mday;
-            obj["hour"] = localTm->tm_hour;
-            obj["minute"] = localTm->tm_min;
-            obj["second"] = localTm->tm_sec;
-            obj["week_day"] = localTm->tm_wday;
-            obj["year_day"] = localTm->tm_yday;
-            obj["is_dst"] = localTm->tm_isdst;
+                t = mktime(&localTm);
+
+                obj["epoch"] = t;
+                obj["year"] = localTm.tm_year;
+                obj["month"] = localTm.tm_mon;
+                obj["month_day"] = localTm.tm_mday;
+                obj["hour"] = localTm.tm_hour;
+                obj["minute"] = localTm.tm_min;
+                obj["second"] = localTm.tm_sec;
+                obj["week_day"] = localTm.tm_wday;
+                obj["year_day"] = localTm.tm_yday;
+                obj["is_dst"] = localTm.tm_isdst;
+            }
+
+            Logger.debugf("In time: %i %02i/%02i/%02i %02i:%02i:%02i", localTm.tm_wday, localTm.tm_mon+1, localTm.tm_mday,
+                localTm.tm_year+1900, localTm.tm_hour, localTm.tm_min, localTm.tm_sec);
+
+            tm schedTm;
+
+            for (int i = 0; i < MAX_SCHEDULES; i++) {
+                delay(10);
+                Scheduler.debugSchedule(i);
+                time_t t2 = Scheduler.nextTime(i, localTm, t);
+                localtime_r(&t2, &schedTm);
+                Logger.debugf("Next time: %i %02i/%02i/%02i %02i:%02i:%02i", schedTm.tm_wday, schedTm.tm_mon+1, schedTm.tm_mday,
+                    schedTm.tm_year+1900, schedTm.tm_hour, schedTm.tm_min, schedTm.tm_sec);
+                t2 = Scheduler.lastTime(i, localTm, t);
+                localtime_r(&t2, &schedTm);
+                Logger.debugf("Last time: %i %02i/%02i/%02i %02i:%02i:%02i", schedTm.tm_wday, schedTm.tm_mon+1, schedTm.tm_mday,
+                    schedTm.tm_year+1900, schedTm.tm_hour, schedTm.tm_min, schedTm.tm_sec);
+            }
+
+            serializeJson(obj, buffer);
+            WebServer.send(200, jsonContent, buffer);
+
+            return;
         }
-
-        for (int i = 0; i < MAX_SCHEDULES; i++) {
-            time_t t = Scheduler.nextTime(i, *localTm);
-            Logger.debugf("Next time for %i, %lu", i, t);
-        }
-
-        if (a) {
-            delete localTm;
-        }
-
-        serializeJson(obj, buffer);
-        WebServer.send(200, jsonContent, buffer);
-
-        return;
     }
 
     sendNotAllowed();

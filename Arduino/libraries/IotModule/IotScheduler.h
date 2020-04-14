@@ -38,10 +38,22 @@ public:
     bool getSchedule(int id, JsonObject &obj);
     void handle();
 
-    time_t nextTime(int scheduleId, tm &curTime);
+    void recalc();
+
+    void debugSchedule(int id);
+
+    time_t nextTime(int scheduleId, tm &curTm, time_t curTime);
+    time_t lastTime(int scheduleId, tm &curTm, time_t curTime);
 private:
     void persist();
     void addSchedule(JsonObject &obj, bool needsPersist);
+    void updateNextSchedule(tm &curTm, time_t curTime);
+
+    time_t lastHandleTime;
+    bool needsRecalc;
+
+    time_t nextScheduleTime;
+    uint8_t nextScheduleId;
 
     Schedule schedules[MAX_SCHEDULES];
 };

@@ -31,6 +31,7 @@ void IotDevice::init() {
 
         if (!err) {
             JsonObject obj = doc.as<JsonObject>();
+            lastStateUpdate = obj[DEVICE_LAST_UPDATE_ATTR].as<time_t>();
             updateState(obj, false);
         }
 
@@ -64,6 +65,7 @@ void IotDevice::persistState() {
     File f = SPIFFS.open("/device_state.json", "w");
     JsonObject obj = doc.to<JsonObject>();
     stateJson(obj);
+    obj[DEVICE_LAST_UPDATE_ATTR] = lastStateUpdate;
     serializeJson(obj, f);
     f.close();
 }
@@ -109,6 +111,20 @@ void IotDevice::infoJson(JsonObject &obj) {
     obj[DEVICE_TZ_ATTR] = timezone;
 }
 
+void IotDevice::updateState(DeviceState &state) {
+    if (type == DeviceTypeDimmer) {
+        slave.dimmer.updateState(state.dimmerState);
+    }
+
+    if (Time.isSet()) {
+        lastStateUpdate = time(nullptr);
+    }
+    stateUpdateTime = millis();
+    if (stateUpdateTime == 0) {
+        stateUpdateTime = 1;
+    }
+}
+
 void IotDevice::updateState(JsonObject &obj) {
     updateState(obj, true);
 }
@@ -120,6 +136,9 @@ void IotDevice::updateState(JsonObject &obj, bool sync) {
     }
 
     if (sync) {
+        if (Time.isSet()) {
+            lastStateUpdate = time(nullptr);
+        }
         stateUpdateTime = millis();
         if (stateUpdateTime == 0) {
             stateUpdateTime = 1;

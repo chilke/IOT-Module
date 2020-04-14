@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <FS.h>
+#include <limits.h>
 #include <ArduinoJson.h>
 
 #include <IotModule.h>
@@ -10,6 +11,8 @@ IotScheduler::IotScheduler() {
         schedules[i].year = 0;
         schedules[i].dayMask = 0;
     }
+    needsRecalc = true;
+    lastHandleTime = 0;
 }
 
 void IotScheduler::init() {
@@ -30,6 +33,64 @@ void IotScheduler::init() {
         }
 
         f.close();
+    }
+}
+
+void IotScheduler::updateNextSchedule(tm &curTm, time_t curTime) {
+    nextScheduleTime = LONG_MAX;
+
+    for (int i = 0; i < MAX_SCHEDULES; i++) {
+        time_t curNextSchedule = nextTime(i, curTm, curTime);
+
+        if (curNextSchedule < nextScheduleTime) {
+            nextScheduleTime = curNextSchedule;
+            nextScheduleId = i;
+        }
+    }
+
+    Logger.debugf("Next schedule updated to %i at %i", nextScheduleId, nextScheduleTime);
+}
+
+void IotScheduler::recalc() {
+    needsRecalc = true;
+}
+
+void IotScheduler::handle() {
+    if (Time.isSet()) {
+        time_t curTime = time(nullptr);
+        tm curTm;
+        if (needsRecalc) {
+            Logger.debug("Scheduler recalculating");
+            if (lastHandleTime == 0) {
+                lastHandleTime = Device.lastStateUpdate;
+            }
+            //First determine if we've skipped any schedules since device last update time
+            localtime_r(&curTime, &curTm);
+            nextScheduleTime = 0;
+            nextScheduleId = 0;
+            for (int i = 0; i < MAX_SCHEDULES; i++) {
+                time_t curLastSchedule = lastTime(i, curTm, curTime);
+
+                if (curLastSchedule > nextScheduleTime) {
+                    nextScheduleTime = curLastSchedule;
+                    nextScheduleId = i;
+                }
+            }
+
+            if (nextScheduleTime != 0 && nextScheduleTime > lastHandleTime) {
+                Logger.debugf("Executing skipped schedule: %i", nextScheduleId);
+                Device.updateState(schedules[nextScheduleId].state);
+            }
+
+            updateNextSchedule(curTm, curTime);
+        } else if (curTime >= nextScheduleTime) {
+            Logger.debugf("Executing schedule: %i", nextScheduleId);
+            Device.updateState(schedules[nextScheduleId].state);
+            localtime_r(&curTime, &curTm);
+            updateNextSchedule(curTm, curTime);
+        }
+
+        lastHandleTime = curTime;
     }
 }
 
@@ -85,6 +146,7 @@ void IotScheduler::addSchedule(JsonObject &obj, bool needsPersist) {
 
     if (needsPersist) {
         persist();
+        recalc();
     }
 }
 
@@ -98,6 +160,7 @@ void IotScheduler::deleteSchedule(int id) {
         schedules[id].dayMask = 0;
 
         persist();
+        recalc();
     }
 }
 
@@ -131,9 +194,9 @@ bool IotScheduler::getSchedule(int id, JsonObject &obj) {
     return false;
 }
 
-time_t IotScheduler::nextTime(int scheduleId, tm &curTime) {
+time_t IotScheduler::nextTime(int scheduleId, tm &curTm, time_t curTime) {
+    tm localTime;
     if (schedules[scheduleId].year != 0) {
-        tm localTime;
         localTime.tm_year = schedules[scheduleId].year;
         localTime.tm_mon = schedules[scheduleId].month-1;
         localTime.tm_mday = schedules[scheduleId].day;
@@ -141,14 +204,12 @@ time_t IotScheduler::nextTime(int scheduleId, tm &curTime) {
         localTime.tm_min = schedules[scheduleId].minute;
         localTime.tm_sec = 0;
         localTime.tm_isdst = -1;
-
-        return mktime(&localTime);
     } else if (schedules[scheduleId].dayMask != 0){
         //First check if today is on the schedule
-        uint8_t curMask = 1<<curTime.tm_wday;
+        uint8_t curMask = 1<<curTm.tm_wday;
         uint8_t daysOff = 255;
         if (schedules[scheduleId].dayMask & curMask) {
-            if (schedules[scheduleId].hour > curTime.tm_hour || (schedules[scheduleId].hour == curTime.tm_hour && schedules[scheduleId].minute > curTime.tm_min)) {
+            if (schedules[scheduleId].hour > curTm.tm_hour || (schedules[scheduleId].hour == curTm.tm_hour && schedules[scheduleId].minute > curTm.tm_min)) {
                 daysOff = 0;
             }
         }
@@ -164,19 +225,100 @@ time_t IotScheduler::nextTime(int scheduleId, tm &curTime) {
             } while ((schedules[scheduleId].dayMask & curMask) == 0);
         }
 
-        tm localTime;
-        localTime.tm_year = curTime.tm_year;
-        localTime.tm_mon = curTime.tm_mon;
-        localTime.tm_mday = curTime.tm_mday + daysOff;
+        localTime.tm_year = curTm.tm_year;
+        localTime.tm_mon = curTm.tm_mon;
+        localTime.tm_mday = curTm.tm_mday + daysOff;
         localTime.tm_hour = schedules[scheduleId].hour;
         localTime.tm_min = schedules[scheduleId].minute;
         localTime.tm_sec = 0;
         localTime.tm_isdst = -1;
-
-        return mktime(&localTime);
+    } else {
+        return LONG_MAX;
     }
-    // This will return max value to ensure inactive schedules don't ever fire
-    return -1;
+
+    time_t t = mktime(&localTime);
+
+    if (t <= curTime) {
+        return LONG_MAX;
+    }
+
+    return t;
+}
+
+time_t IotScheduler::lastTime(int scheduleId, tm &curTm, time_t curTime) {
+    tm localTime;
+    if (schedules[scheduleId].year != 0) {
+        localTime.tm_year = schedules[scheduleId].year;
+        localTime.tm_mon = schedules[scheduleId].month-1;
+        localTime.tm_mday = schedules[scheduleId].day;
+        localTime.tm_hour = schedules[scheduleId].hour;
+        localTime.tm_min = schedules[scheduleId].minute;
+        localTime.tm_sec = 0;
+        localTime.tm_isdst = -1;
+    } else if (schedules[scheduleId].dayMask != 0){
+        //First check if today is on the schedule
+        uint8_t curMask = 1<<curTm.tm_wday;
+        uint8_t daysOff = 255;
+        if (schedules[scheduleId].dayMask & curMask) {
+            if (schedules[scheduleId].hour < curTm.tm_hour || (schedules[scheduleId].hour == curTm.tm_hour && schedules[scheduleId].minute <= curTm.tm_min)) {
+                daysOff = 0;
+            }
+        }
+
+        if (daysOff == 255) {
+            daysOff = 0;
+            do {
+                daysOff++;
+                curMask >>= 1;
+                if (curMask == 0) {
+                    curMask = 1<<6;
+                }
+            } while ((schedules[scheduleId].dayMask & curMask) == 0);
+        }
+
+        localTime.tm_year = curTm.tm_year;
+        localTime.tm_mon = curTm.tm_mon;
+        localTime.tm_mday = curTm.tm_mday - daysOff;
+        localTime.tm_hour = schedules[scheduleId].hour;
+        localTime.tm_min = schedules[scheduleId].minute;
+        localTime.tm_sec = 0;
+        localTime.tm_isdst = -1;
+    } else {
+        return 0;
+    }
+
+    time_t t = mktime(&localTime);
+
+    if (t > curTime) {
+        return 0;
+    }
+
+    return t;
+}
+
+void IotScheduler::debugSchedule(int id) {
+    if (schedules[id].year != 0) {
+        Logger.debugf("Schedule: %02i/%02i/%02i %02i:%02i", schedules[id].month, schedules[id].day,
+            schedules[id].year+1900, schedules[id].hour, schedules[id].minute);
+    } else if (schedules[id].dayMask != 0) {
+        String days = "[";
+        uint8_t curMask = 1;
+        uint8_t curDay = 0;
+        while (curDay < 7) {
+            if (schedules[id].dayMask & curMask) {
+                if (days.length() > 1) {
+                    days += ",";
+                }
+                days += String(curDay);
+            }
+            curMask <<= 1;
+            curDay++;
+        }
+        days += "]";
+        Logger.debugf("Schedule: %s %02i:%02i", days.c_str(), schedules[id].hour, schedules[id].minute);
+    } else {
+        Logger.debug("Inactive schedule");
+    }
 }
 
 IotScheduler Scheduler;

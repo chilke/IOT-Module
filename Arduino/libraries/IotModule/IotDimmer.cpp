@@ -43,6 +43,14 @@ void IotDimmer::infoJson(JsonObject &obj) {
     }
 }
 
+void IotDimmer::updateState(DimmerState &state) {
+    for (uint8_t id = 0; id < DIM_CH_CNT; id++) {
+        if (UartComm.sendDimmerValue(id, state.values[id]) == UART_COMM_SUCCESS) {
+            channels[id].curValue = state.values[id];
+        }
+    }
+}
+
 void IotDimmer::updateState(JsonObject &obj) {
     JsonArray chs = obj[DIM_CH_ATTR];
 

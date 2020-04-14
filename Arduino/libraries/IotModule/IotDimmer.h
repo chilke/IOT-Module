@@ -34,6 +34,7 @@ public:
     DimmerChannel channels[DIM_CH_CNT];
 
     void updateInfo(JsonObject &obj);
+    void updateState(DimmerState &state);
     void updateState(JsonObject &obj);
     void infoJson(JsonObject &obj);
     void stateJson(JsonObject &obj);

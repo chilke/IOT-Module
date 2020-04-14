@@ -1,6 +1,7 @@
 #ifndef DEVICE_H
 #define DEVICE_H
 
+#include <time.h>
 #include <ArduinoJson.h>
 #include <IotDimmer.h>
 
@@ -11,6 +12,7 @@
 #define DEVICE_LOC_ATTR "lo"
 #define DEVICE_TZ_ATTR "tz"
 #define DEVICE_PERIPHERAL_ATTR "pr"
+#define DEVICE_LAST_UPDATE_ATTR "ud"
 
 #define STATE_UPDATE_TIME 1000
 
@@ -36,6 +38,8 @@ public:
     String location;
     String timezone;
 
+    time_t lastStateUpdate;
+
     DeviceSlave slave;
 
     uint32_t stateUpdateTime;
@@ -49,6 +53,7 @@ public:
     void persistInfo();
     void persistState();
     void updateInfo(JsonObject &obj);
+    void updateState(DeviceState &state);
     void updateState(JsonObject &obj);
     void updateState(JsonObject &obj, bool sync);
     void infoJson(JsonObject &obj);

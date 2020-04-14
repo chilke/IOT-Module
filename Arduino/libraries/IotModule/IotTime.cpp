@@ -18,6 +18,7 @@ IotTime::IotTime() {
 
 void IotTime::setTz(String tz) {
     configTime(tz.c_str(), NTP_HOST_0, NTP_HOST_1, NTP_HOST_2);
+    Scheduler.recalc();
 }
 
 void IotTime::timeSet() {

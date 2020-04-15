@@ -38,7 +38,7 @@ public:
     String location;
     String timezone;
 
-    time_t lastStateUpdate;
+    tm lastStateUpdate;
 
     DeviceSlave slave;
 

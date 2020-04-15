@@ -49,7 +49,7 @@ private:
     void addSchedule(JsonObject &obj, bool needsPersist);
     void updateNextSchedule(tm &curTm, time_t curTime);
 
-    time_t lastHandleTime;
+    tm lastHandleTime;
     bool needsRecalc;
 
     time_t nextScheduleTime;

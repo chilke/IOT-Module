@@ -12,7 +12,7 @@ IotScheduler::IotScheduler() {
         schedules[i].dayMask = 0;
     }
     needsRecalc = true;
-    lastHandleTime = 0;
+    lastHandleTime.tm_year = 0;
 }
 
 void IotScheduler::init() {
@@ -59,13 +59,13 @@ void IotScheduler::handle() {
     if (Time.isSet()) {
         time_t curTime = time(nullptr);
         tm curTm;
+        localtime_r(&curTime, &curTm);
         if (needsRecalc) {
             Logger.debug("Scheduler recalculating");
-            if (lastHandleTime == 0) {
+            if (lastHandleTime.tm_year == 0) {
                 lastHandleTime = Device.lastStateUpdate;
             }
             //First determine if we've skipped any schedules since device last update time
-            localtime_r(&curTime, &curTm);
             nextScheduleTime = 0;
             nextScheduleId = 0;
             for (int i = 0; i < MAX_SCHEDULES; i++) {
@@ -77,7 +77,7 @@ void IotScheduler::handle() {
                 }
             }
 
-            if (nextScheduleTime != 0 && nextScheduleTime > lastHandleTime) {
+            if (nextScheduleTime != 0) { // && nextScheduleTime > lastHandleTime) {
                 Logger.debugf("Executing skipped schedule: %i", nextScheduleId);
                 Device.updateState(schedules[nextScheduleId].state);
             }
@@ -86,11 +86,10 @@ void IotScheduler::handle() {
         } else if (curTime >= nextScheduleTime) {
             Logger.debugf("Executing schedule: %i", nextScheduleId);
             Device.updateState(schedules[nextScheduleId].state);
-            localtime_r(&curTime, &curTm);
             updateNextSchedule(curTm, curTime);
         }
 
-        lastHandleTime = curTime;
+        lastHandleTime = curTm;
     }
 }
 

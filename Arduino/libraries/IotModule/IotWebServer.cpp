@@ -728,21 +728,6 @@ void handleTime() {
                 Logger.debugf("In time: %i %02i/%02i/%02i %02i:%02i:%02i", localTm.tm_wday, localTm.tm_mon+1, localTm.tm_mday,
                     localTm.tm_year+1900, localTm.tm_hour, localTm.tm_min, localTm.tm_sec);
 
-                tm schedTm;
-
-                for (int i = 0; i < MAX_SCHEDULES; i++) {
-                    delay(10);
-                    Scheduler.debugSchedule(i);
-                    time_t t2 = Scheduler.nextTime(i, localTm, t);
-                    localtime_r(&t2, &schedTm);
-                    Logger.debugf("Next time: %i %02i/%02i/%02i %02i:%02i:%02i", schedTm.tm_wday, schedTm.tm_mon+1, schedTm.tm_mday,
-                        schedTm.tm_year+1900, schedTm.tm_hour, schedTm.tm_min, schedTm.tm_sec);
-                    t2 = Scheduler.lastTime(i, localTm, t);
-                    localtime_r(&t2, &schedTm);
-                    Logger.debugf("Last time: %i %02i/%02i/%02i %02i:%02i:%02i", schedTm.tm_wday, schedTm.tm_mon+1, schedTm.tm_mday,
-                        schedTm.tm_year+1900, schedTm.tm_hour, schedTm.tm_min, schedTm.tm_sec);
-                }
-
                 serializeJson(obj, buffer);
                 WebServer.send(200, jsonContent, buffer);
 

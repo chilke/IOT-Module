@@ -19,16 +19,6 @@
 
 #define MAX_SCHEDULES 5
 
-typedef struct schedule_t {
-    uint8_t year;
-    uint8_t month;
-    uint8_t day;
-    uint8_t hour;
-    uint8_t minute;
-    uint8_t dayMask;
-    DeviceState state;
-} Schedule;
-
 class IotScheduler {
 public:
     IotScheduler();
@@ -41,21 +31,17 @@ public:
     void recalc();
 
     void debugSchedule(int id);
-
-    time_t nextTime(int scheduleId, tm &curTm, time_t curTime);
-    time_t lastTime(int scheduleId, tm &curTm, time_t curTime);
 private:
     void persist();
     void addSchedule(JsonObject &obj, bool needsPersist);
-    void updateNextSchedule(tm &curTm, time_t curTime);
+    void updateNextSchedule(tm &curTm, uint32_t curCompTime);
 
-    tm lastHandleTime;
+    uint32_t lastHandleTime;
     bool needsRecalc;
 
-    time_t nextScheduleTime;
-    uint8_t nextScheduleId;
+    uint32_t nextScheduleTime;
 
-    Schedule schedules[MAX_SCHEDULES];
+    IotSchedule schedules[MAX_SCHEDULES];
 };
 
 extern IotScheduler Scheduler;

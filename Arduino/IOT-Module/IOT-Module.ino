@@ -87,7 +87,7 @@ void setup() {
         WiFi.softAP(SAFE_MODE_SSID);
     } else {
         UartComm.init();
-        Device.init();
+        Device.init();  //Device must be init before Scheduler :)
         Scheduler.init();
         WCM.begin(apMode);
         WebServer.begin();

@@ -54,27 +54,39 @@ int IotTime::printTime(char *buf, int size, tm &t) {
         t.tm_hour, t.tm_min, t.tm_sec);
 }
 
-uint32_t IotTime::tmToInt(tm &t) {
+uint32_t IotTime::curCompTime() {
+    time_t a = time(nullptr);
+    return epochToCompTime(a);
+}
+
+uint32_t IotTime::tmToCompTime(tm &t) {
     uint32_t u;
 
-    u = t.tm_year;
-    u *= 12;
-    u += t.tm_mon;
-    u *= 31;
-    u += t.tm_mday;
-    u *= 24;
-    u += t.tm_hour;
-    u *= 60;
-    u += t.tm_min;
-    u *= 60;
+    u = t.tm_year-70;  //This aligns with epoch start in 1970
+    u *= SECS_PER_YEAR;
+    
+    u += SECS_PER_MONTH * t.tm_mon;
+
+    u += SECS_PER_DAY * (t.tm_mday-1);
+
+    u += SECS_PER_HOUR * t.tm_hour;
+
+    u += SECS_PER_MINUTE * t.tm_min;
+
     u += t.tm_sec;
 
     return u;
 }
 
+uint32_t IotTime::epochToCompTime(time_t t) {
+    tm a;
+    localtime_r(&t, &a);
+    return tmToCompTime(a);
+}
+
 int IotTime::compareTm(tm &t1, tm &t2) {
-    uint32_t u1 = tmToInt(t1);
-    uint32_t u2 = tmToInt(t2);
+    uint32_t u1 = tmToCompTime(t1);
+    uint32_t u2 = tmToCompTime(t2);
 
     if (u1 > u2) {
         return 1;

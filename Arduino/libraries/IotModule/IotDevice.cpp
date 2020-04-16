@@ -31,8 +31,7 @@ void IotDevice::init() {
 
         if (!err) {
             JsonObject obj = doc.as<JsonObject>();
-            String t = obj[DEVICE_LAST_UPDATE_ATTR];
-            Time.parseTime(t.c_str(), lastStateUpdate);
+            lastStateUpdate = obj[DEVICE_LAST_UPDATE_ATTR];
             updateState(obj, false);
         }
 
@@ -64,11 +63,9 @@ void IotDevice::persistInfo() {
 void IotDevice::persistState() {
     DynamicJsonDocument doc(JSON_BUFFER_SIZE);
     File f = SPIFFS.open("/device_state.json", "w");
-    char buffer[30];
     JsonObject obj = doc.to<JsonObject>();
     stateJson(obj);
-    Time.printTime(buffer, 30, lastStateUpdate);
-    obj[DEVICE_LAST_UPDATE_ATTR] = buffer;
+    obj[DEVICE_LAST_UPDATE_ATTR] = lastStateUpdate;
     serializeJson(obj, f);
     f.close();
 }
@@ -120,8 +117,7 @@ void IotDevice::updateState(DeviceState &state) {
     }
 
     if (Time.isSet()) {
-        time_t now = time(nullptr);
-        localtime_r(&now, &lastStateUpdate);
+        lastStateUpdate = Time.curCompTime();
     }
     stateUpdateTime = millis();
     if (stateUpdateTime == 0) {
@@ -138,13 +134,10 @@ void IotDevice::updateState(JsonObject &obj, bool sync) {
         JsonObject periph = obj[DEVICE_PERIPHERAL_ATTR];
         slave.dimmer.updateState(periph);
     }
-    char buffer[30];
-    Time.printTime(buffer, 30, lastStateUpdate);
-    Logger.debugf("Updating state, last update: %s", buffer);
+
     if (sync) {
         if (Time.isSet()) {
-            time_t now = time(nullptr);
-            localtime_r(&now, &lastStateUpdate);
+            lastStateUpdate = Time.curCompTime();
         }
         stateUpdateTime = millis();
         if (stateUpdateTime == 0) {

@@ -104,6 +104,7 @@ void loop() {
         if (WiFi.status() == WL_CONNECTED) {
             if (Time.isSet()) {
                 Mqtt.handle();
+                Scheduler.handle();
             }
         }
     }

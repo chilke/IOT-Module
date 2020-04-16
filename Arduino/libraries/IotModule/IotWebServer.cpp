@@ -728,51 +728,11 @@ void handleTime() {
                 Logger.debugf("In time: %i %02i/%02i/%02i %02i:%02i:%02i", localTm.tm_wday, localTm.tm_mon+1, localTm.tm_mday,
                     localTm.tm_year+1900, localTm.tm_hour, localTm.tm_min, localTm.tm_sec);
 
+                Time.setTime(t);
+
                 serializeJson(obj, buffer);
                 WebServer.send(200, jsonContent, buffer);
 
-                return;
-            }
-        }
-    } else if (WebServer.method() == HTTP_PUT) {
-        if (WebServer.hasArg("plain")) {
-            DynamicJsonDocument doc(JSON_BUFFER_SIZE);
-            DeserializationError err = deserializeJson(doc, WebServer.arg("plain"));
-
-            if (!err) {
-                JsonObject obj = doc["time1"];
-
-                tm t1;
-                t1.tm_year = obj["year"];
-                t1.tm_mon = obj["month"];
-                t1.tm_mday = obj["month_day"];
-                t1.tm_hour = obj["hour"];
-                t1.tm_min = obj["minute"];
-                t1.tm_sec = obj["second"];
-                t1.tm_wday = obj["week_day"];
-                t1.tm_yday = obj["year_day"];
-                t1.tm_isdst = obj["is_dst"];
-
-                JsonObject obj2 = doc["time2"];
-                tm t2;
-                t2.tm_year = obj2["year"];
-                t2.tm_mon = obj2["month"];
-                t2.tm_mday = obj2["month_day"];
-                t2.tm_hour = obj2["hour"];
-                t2.tm_min = obj2["minute"];
-                t2.tm_sec = obj2["second"];
-                t2.tm_wday = obj2["week_day"];
-                t2.tm_yday = obj2["year_day"];
-                t2.tm_isdst = obj2["is_dst"];
-
-                char buf[30];
-                Time.printTime(buf, 30, t1);
-                Logger.debugf("T1: %s", buf);
-                Time.printTime(buf, 30, t2);
-                Logger.debugf("T2: %s", buf);
-                Logger.debugf("Compare: %d", Time.compareTm(t1, t2));
-
-                sendDone();
                 return;
             }
         }

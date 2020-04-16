@@ -49,7 +49,7 @@ void IotScheduler::updateNextSchedule(tm &curTm, uint32_t curCompTime) {
         }
     }
 
-    Logger.debugf("Next schedule updated to %i", nextScheduleTime);
+    Logger.debugf("Next schedule updated to %u", nextScheduleTime);
 }
 
 void IotScheduler::recalc() {
@@ -84,6 +84,8 @@ void IotScheduler::handle() {
             }
 
             updateNextSchedule(curTm, curCompTime);
+
+            needsRecalc = false;
         }
 
         lastHandleTime = curCompTime;

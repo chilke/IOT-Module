@@ -1,6 +1,8 @@
 #include <time.h>
 #include <TZ.h>
 #include <coredecls.h>
+#include <c_types.h>
+#include <sntp-lwip2.h>
 
 #include <IotModule.h>
 #include <IotTime.h>
@@ -27,6 +29,10 @@ void IotTime::timeSet() {
 
 bool IotTime::isSet() {
     return set;
+}
+
+void IotTime::setTime(time_t t) {
+    SNTP_SET_SYSTEM_TIME_US(t, 0);
 }
 
 int IotTime::curTimeToBuffer(char *buf, int size) {

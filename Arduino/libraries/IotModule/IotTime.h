@@ -27,6 +27,8 @@ public:
     uint32_t tmToCompTime(tm &t);
     uint32_t epochToCompTime(time_t t);
 
+    void setTime(time_t t);
+
     int compareTm(tm &t1, tm &t2);
 private:
     bool set;

@@ -29,7 +29,8 @@ public:
 private:
     bool loadCerts();
     void connect(uint32_t m);
-    void sendDeviceInfo(const char topic[], const char cmd[], bool aws);
+    void sendDeviceInfo(const char cmd[], bool aws);
+    void sendSchedules();
 
     BearSSL::X509List cert;
     BearSSL::X509List client_crt;

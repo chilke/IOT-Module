@@ -9,7 +9,7 @@
 IotScheduler::IotScheduler() {
     needsRecalc = true;
     lastHandleTime = 0;
-
+    needsSync = false;
     for (int i = 0; i < MAX_SCHEDULES; i++) {
         schedules[i].id = i;
     }
@@ -52,10 +52,6 @@ void IotScheduler::updateNextSchedule(tm &curTm, uint32_t curCompTime) {
     Logger.debugf("Next schedule updated to %u", nextScheduleTime);
 }
 
-void IotScheduler::recalc() {
-    needsRecalc = true;
-}
-
 void IotScheduler::handle() {
     if (Time.isSet()) {
         time_t curEpochTime = time(nullptr);
@@ -64,6 +60,9 @@ void IotScheduler::handle() {
         uint32_t curCompTime = Time.tmToCompTime(curTm);
 
         if (needsRecalc || curCompTime < lastHandleTime || curCompTime >=nextScheduleTime) {
+            if (curCompTime < lastHandleTime) {
+                lastHandleTime = curCompTime;
+            }
             Logger.debug("Scheduler recalculating");
 
             nextScheduleTime = 0;
@@ -71,14 +70,13 @@ void IotScheduler::handle() {
 
             for (int i = 0; i < MAX_SCHEDULES; i++) {
                 uint32_t curLastSchedule = schedules[i].lastTime(curTm, curCompTime);
-
                 if (curLastSchedule > nextScheduleTime) {
                     nextScheduleTime = curLastSchedule;
                     scheduleId = i;
                 }
             }
 
-            if (nextScheduleTime != 0 && nextScheduleTime > lastHandleTime) {
+            if (nextScheduleTime != 0 && nextScheduleTime >= lastHandleTime) {
                 Logger.debugf("Executing schedule: %i", scheduleId);
                 Device.updateState(schedules[scheduleId].state);
             }
@@ -103,6 +101,8 @@ void IotScheduler::persist() {
         doc.clear();
     }
     f.close();
+
+    needsSync = true;
 }
 
 void IotScheduler::addSchedule(JsonObject &obj) {
@@ -124,7 +124,7 @@ void IotScheduler::addSchedule(JsonObject &obj, bool needsPersist) {
 
     if (needsPersist) {
         persist();
-        recalc();
+        needsRecalc = true;
     }
 }
 
@@ -133,7 +133,7 @@ void IotScheduler::deleteSchedule(int id) {
         schedules[id].inActivate();
 
         persist();
-        recalc();
+        needsRecalc = true;
     }
 }
 

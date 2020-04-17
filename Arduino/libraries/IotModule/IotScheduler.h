@@ -28,9 +28,9 @@ public:
     bool getSchedule(int id, JsonObject &obj);
     void handle();
 
-    void recalc();
-
     void debugSchedule(int id);
+
+    bool needsSync;
 private:
     void persist();
     void addSchedule(JsonObject &obj, bool needsPersist);

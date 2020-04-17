@@ -36,12 +36,27 @@ void IotMqtt::messageReceived(char* topic, char* payload, unsigned int length) {
             Device.updateInfo(obj);
             Device.syncDevice = true;
         } else if (cmd == "get_devices") {
+            Logger.debug("Received query");
             queryReceived = true;
+        } else if (cmd == "get_schedules") {
+            Logger.debug("Get schedules");
+            Scheduler.needsSync = true;
+        } else if (cmd == "add_schedule") {
+            Logger.debug("Add schedule");
+            Scheduler.addSchedule(obj);
+            Scheduler.needsSync = true;
+        } else if (cmd == "del_schedule") {
+            Logger.debug("Delete schedule");
+            if (obj.containsKey("id")) {
+                int id = obj["id"];
+                Scheduler.deleteSchedule(id);
+            }
+            Scheduler.needsSync = true;
         }
     }
 }
 
-void IotMqtt::sendDeviceInfo(const char topic[], const char cmd[], bool aws) {
+void IotMqtt::sendDeviceInfo(const char cmd[], bool aws) {
     DynamicJsonDocument doc(JSON_BUFFER_SIZE);
     JsonObject obj = doc.to<JsonObject>();
     Device.infoJson(obj);
@@ -51,7 +66,32 @@ void IotMqtt::sendDeviceInfo(const char topic[], const char cmd[], bool aws) {
     obj["lambda"] = aws;
     serializeJson(obj, buffer);
 
-    client.publish(topic, buffer.c_str());
+    client.publish("to/apps", buffer.c_str());
+}
+
+void IotMqtt::sendSchedules() {
+    //Very hacky, but don't have enough memory to hold json schedules
+    String buffer = "{\"cmd\":\"update_schedules\",\"ci\":\"";
+    buffer += Device.clientID;
+    buffer += "\",\"schedules\":[";
+    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+    JsonObject obj;
+    bool first = true;
+    for (int i = 0; i < MAX_SCHEDULES; i++) {
+        obj = doc.to<JsonObject>();
+        if (Scheduler.getSchedule(i, obj)) {
+            if (!first) {
+                buffer += ",";
+            } else {
+                first = false;
+            }
+            serializeJson(obj, buffer);
+        }
+        doc.clear();
+    }
+    buffer += "]}";
+
+    client.publish("to/apps", buffer.c_str());
 }
 
 void IotMqtt::init() {
@@ -116,16 +156,21 @@ void IotMqtt::handle() {
 
             if (Device.syncDevice) {
                 Logger.debug("Sending device info");
-                sendDeviceInfo("to/apps", "update_device", true);
+                sendDeviceInfo("update_device", true);
                 Device.syncDevice = false;
                 Device.syncState = false;
             } else if (Device.syncState) {
                 Logger.debug("Sending state info");
-                sendDeviceInfo("to/apps", "update_state", false);
+                sendDeviceInfo("update_state", false);
                 Device.syncState = false;
             } else if (queryReceived) {
-                sendDeviceInfo("to/apps", "get_devices_resp", false);
+                Logger.debug("Sending query response");
+                sendDeviceInfo("get_devices_resp", false);
                 queryReceived = false;
+            } else if (Scheduler.needsSync) {
+                Logger.debug("Sending schedules");
+                sendSchedules();
+                Scheduler.needsSync = false;
             }
         } else {
             connect(m);

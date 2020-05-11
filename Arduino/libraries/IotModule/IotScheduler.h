@@ -6,17 +6,6 @@
 
 #include <IotModule.h>
 
-#define SCHEDULE_STATE_ATTR "st"
-#define SCHEDULE_TIME_ATTR "tm"
-#define SCHEDULE_DATE_ATTR "dt"
-#define SCHEDULE_DAYS_ATTR "ds"
-#define SCHEDULE_HOUR_ATTR "hr"
-#define SCHEDULE_MINUTE_ATTR "mn"
-#define SCHEDULE_MONTH_ATTR "mo"
-#define SCHEDULE_DAY_ATTR "dy"
-#define SCHEDULE_YEAR_ATTR "yr"
-#define SCHEDULE_ID_ATTR "id"
-
 #define MAX_SCHEDULES 5
 
 class IotScheduler {

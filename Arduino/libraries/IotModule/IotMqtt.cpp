@@ -30,20 +30,23 @@ void IotMqtt::messageReceived(char* topic, char* payload, unsigned int length) {
 
         if (cmd == "update_state") {
             Logger.debug("Update device state");
-            Device.updateState(obj);
+            JsonObject state = obj["st"];
+            Device.updateState(state);
         } else if (cmd == "update_device") {
             Logger.debug("Updated device info");
-            Device.updateInfo(obj);
+            JsonObject device = obj["dv"];
+            Device.updateInfo(device);
             Device.syncDevice = true;
         } else if (cmd == "get_devices") {
             Logger.debug("Received query");
-            queryReceived = true;
+            Device.syncDevice = true;
         } else if (cmd == "get_schedules") {
             Logger.debug("Get schedules");
             Scheduler.needsSync = true;
         } else if (cmd == "add_schedule") {
             Logger.debug("Add schedule");
-            Scheduler.addSchedule(obj);
+            JsonObject schedule = obj["sc"];
+            Scheduler.addSchedule(schedule);
             Scheduler.needsSync = true;
         } else if (cmd == "del_schedule") {
             Logger.debug("Delete schedule");
@@ -56,24 +59,33 @@ void IotMqtt::messageReceived(char* topic, char* payload, unsigned int length) {
     }
 }
 
-void IotMqtt::sendDeviceInfo(const char cmd[], bool aws) {
+void IotMqtt::sendDeviceInfo() {
     DynamicJsonDocument doc(JSON_BUFFER_SIZE);
-    JsonObject obj = doc.to<JsonObject>();
+    JsonObject obj = doc.createNestedObject("dv");
     Device.infoJson(obj);
+    String buffer;
+    doc["cmd"] = "device_info";
+    serializeJson(doc, buffer);
+
+    client.publish("to/apps", buffer.c_str());
+}
+
+void IotMqtt::sendDeviceState() {
+    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+    JsonObject obj = doc.createNestedObject("st");
     Device.stateJson(obj);
     String buffer;
-    obj["cmd"] = cmd;
-    obj["lambda"] = aws;
-    serializeJson(obj, buffer);
+    doc["cmd"] = "device_state";
+    serializeJson(doc, buffer);
 
     client.publish("to/apps", buffer.c_str());
 }
 
 void IotMqtt::sendSchedules() {
     //Very hacky, but don't have enough memory to hold json schedules
-    String buffer = "{\"cmd\":\"update_schedules\",\"ci\":\"";
+    String buffer = "{\"cmd\":\"schedules\",\"ci\":\"";
     buffer += Device.clientID;
-    buffer += "\",\"schedules\":[";
+    buffer += "\",\"sc\":[";
     DynamicJsonDocument doc(JSON_BUFFER_SIZE);
     JsonObject obj;
     bool first = true;
@@ -141,7 +153,6 @@ void IotMqtt::connect(uint32_t m) {
                 client.disconnect();
             } else {
                 Device.syncDevice = true;
-                queryReceived = false;
             }
         }
         lastConnectAttempt = m;
@@ -156,17 +167,13 @@ void IotMqtt::handle() {
 
             if (Device.syncDevice) {
                 Logger.debug("Sending device info");
-                sendDeviceInfo("update_device", true);
+                sendDeviceInfo();
                 Device.syncDevice = false;
                 Device.syncState = false;
             } else if (Device.syncState) {
                 Logger.debug("Sending state info");
-                sendDeviceInfo("update_state", false);
+                sendDeviceState();
                 Device.syncState = false;
-            } else if (queryReceived) {
-                Logger.debug("Sending query response");
-                sendDeviceInfo("get_devices_resp", false);
-                queryReceived = false;
             } else if (Scheduler.needsSync) {
                 Logger.debug("Sending schedules");
                 sendSchedules();

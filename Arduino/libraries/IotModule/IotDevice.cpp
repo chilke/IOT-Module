@@ -77,8 +77,7 @@ void IotDevice::updateInfo(JsonObject &obj) {
     String tmpStr = obj[DEVICE_TYPE_ATTR].as<String>();
     if (tmpStr == DIM_TYPE_NAME) {
         type = DeviceTypeDimmer;
-        JsonObject periph = obj[DEVICE_PERIPHERAL_ATTR];
-        slave.dimmer.updateInfo(periph);
+        slave.dimmer.updateInfo(obj);
     } else {
         type = DeviceTypeNone;
     }
@@ -97,14 +96,8 @@ void IotDevice::infoJson(JsonObject &obj) {
     String typeStr = "";
     if (type == DeviceTypeDimmer) {
         typeStr = DIM_TYPE_NAME;
-        JsonObject periph;
-        if (obj.containsKey(DEVICE_PERIPHERAL_ATTR)) {
-            periph = obj[DEVICE_PERIPHERAL_ATTR].as<JsonObject>();
-        } else {
-            periph = obj.createNestedObject(DEVICE_PERIPHERAL_ATTR);
-        }
 
-        slave.dimmer.infoJson(periph);
+        slave.dimmer.infoJson(obj);
     }
     obj[DEVICE_TYPE_ATTR] = typeStr;
     obj[DEVICE_LOC_ATTR] = location;
@@ -131,8 +124,7 @@ void IotDevice::updateState(JsonObject &obj) {
 
 void IotDevice::updateState(JsonObject &obj, bool sync) {
     if (type == DeviceTypeDimmer) {
-        JsonObject periph = obj[DEVICE_PERIPHERAL_ATTR];
-        slave.dimmer.updateState(periph);
+        slave.dimmer.updateState(obj);
     }
 
     if (sync) {
@@ -147,15 +139,9 @@ void IotDevice::updateState(JsonObject &obj, bool sync) {
 }
 
 void IotDevice::stateJson(JsonObject &obj) {
+    obj[DEVICE_CLIENT_ATTR] = clientID;
     if (type == DeviceTypeDimmer) {
-        JsonObject periph;
-        if (obj.containsKey(DEVICE_PERIPHERAL_ATTR)) {
-            periph = obj[DEVICE_PERIPHERAL_ATTR].as<JsonObject>();
-        } else {
-            periph = obj.createNestedObject(DEVICE_PERIPHERAL_ATTR);
-        }
-
-        slave.dimmer.stateJson(periph);
+        slave.dimmer.stateJson(obj);
     }
 }
 

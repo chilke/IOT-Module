@@ -87,3 +87,13 @@ Cases to handle:
     Need to set all missed one off schedules to inactive state.
 
 Scheduler handler function.
+
+
+App Design
+Navigation
+Devices
+Things
+Certs
+Settings
+
+

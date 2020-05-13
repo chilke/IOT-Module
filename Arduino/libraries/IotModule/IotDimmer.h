@@ -10,6 +10,7 @@
 #define DIM_CH_CUR_ATTR "cv"
 #define DIM_CH_ID_ATTR "id"
 #define DIM_CH_ATTR "ch"
+#define DIM_CH_CURS_ATTR "cvs"
 
 #define DIM_CH_CNT 2
 

@@ -142,6 +142,7 @@ void IotDevice::stateJson(JsonObject &obj) {
     obj[DEVICE_CLIENT_ATTR] = clientID;
     if (type == DeviceTypeDimmer) {
         slave.dimmer.stateJson(obj);
+        obj[DEVICE_TYPE_ATTR] = DIM_TYPE_NAME;
     }
 }
 

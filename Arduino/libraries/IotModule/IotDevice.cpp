@@ -159,6 +159,7 @@ bool IotDevice::stateFromJson(DeviceState &state, JsonObject &obj) {
 bool IotDevice::stateToJson(DeviceState &state, JsonObject &obj) {
     if (type == DeviceTypeDimmer) {
         slave.dimmer.stateToJson(state.dimmerState, obj);
+        obj[DEVICE_TYPE_ATTR] = DIM_TYPE_NAME;
     } else {
         return false;
     }

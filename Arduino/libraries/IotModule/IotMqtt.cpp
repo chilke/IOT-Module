@@ -148,7 +148,7 @@ void IotMqtt::connect(uint32_t m) {
             if (!client.subscribe(topicBuf)) {
                 Logger.debugf("Subscribe failed to %s", topicBuf);
                 client.disconnect();
-            } else if (!client.subscribe("to/things")) {
+            } else if (!client.subscribe("to/devs")) {
                 Logger.debug("Subscribe failed to all");
                 client.disconnect();
             } else {

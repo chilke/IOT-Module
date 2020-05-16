@@ -19,3 +19,6 @@ device_info message
 
 device_state message
 {"st":{"cvs":[1024,2048],"tp":""},"cmd":"device_state"}
+
+schedules message    
+{"cmd":"schedules","ci":"IOT-CABABBA1","sc":[{"yr":2020,"mo":5,"dy":13,"hr":21,"mn":15,"id":0,"st":{"cvs":[0,0]}},{"yr":2020,"mo":5,"dy":13,"hr":21,"mn":39,"id":1,"st":{"cvs":[0,0]}},{"yr":2020,"mo":5,"dy":13,"hr":21,"mn":48,"id":2,"st":{"cvs":[0,0]}}]}
